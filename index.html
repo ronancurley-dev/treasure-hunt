@@ -475,6 +475,91 @@
   }
   .toast.show { transform: translateX(-50%) translateY(0); }
 
+  /* ── TAP-IN STYLES ── */
+  .tapin-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin: 14px 0 10px;
+    width: 100%;
+  }
+
+  .tapin-btn {
+    padding: 18px 10px 14px;
+    border-radius: 16px;
+    border: 3px solid;
+    background: white;
+    font-family: 'Fredoka One', cursive;
+    cursor: pointer;
+    transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 76px;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tapin-btn:active { transform: scale(0.92); }
+
+  .tapin-btn.tapped {
+    color: white !important;
+    border-color: transparent !important;
+    transform: scale(1.05);
+  }
+
+  .tapin-check {
+    font-size: 22px;
+    line-height: 1;
+    transition: opacity 0.2s, transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  .tapin-btn:not(.tapped) .tapin-check { opacity: 0.2; }
+  .tapin-btn.tapped .tapin-check { opacity: 1; transform: scale(1.3); }
+
+  .tapin-name {
+    font-size: 15px;
+    line-height: 1;
+  }
+
+  .tapin-progress {
+    font-family: 'Fredoka One', cursive;
+    font-size: 16px;
+    color: var(--muted);
+    text-align: center;
+    margin-bottom: 16px;
+    min-height: 24px;
+    transition: color 0.3s;
+  }
+  .tapin-progress.complete { color: var(--green); }
+
+  .tapin-cancel {
+    background: none;
+    border: none;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    padding: 4px;
+    display: block;
+    margin: 0 auto;
+    text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+
+  /* Team member rows in admin */
+  .team-member-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .team-color-dot {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+
   /* ── ADMIN STYLES ── */
   .admin-overlay {
     position: fixed;
@@ -787,7 +872,8 @@ const DEFAULT_GAME_CONFIG = {
     }
   ],
   winMessage: "You found it! 🎉",
-  prizeText: "🍦 Claim your ice cream at the finish line!"
+  prizeText: "🍦 Claim your ice cream at the finish line!",
+  team: []
 };
 
 // Load config from URL hash if present (set by admin "Save & Copy Link")
@@ -887,6 +973,18 @@ const GAME_CONFIG = (function() {
   </div>
 </div>
 
+<!-- ── Tap-In Overlay ── -->
+<div class="overlay hidden" id="tapInOverlay">
+  <div class="overlay-card">
+    <div class="overlay-emoji" id="tapInEmoji">📍</div>
+    <div class="overlay-title" id="tapInTitle">You're here!</div>
+    <div class="overlay-sub">Everyone tap your button to unlock this checkpoint!</div>
+    <div class="tapin-grid" id="tapInGrid"></div>
+    <div class="tapin-progress" id="tapInProgress"></div>
+    <button class="tapin-cancel" onclick="cancelTapIn()">Not here yet — cancel</button>
+  </div>
+</div>
+
 <!-- ── Admin PIN Overlay ── -->
 <div class="overlay hidden" id="adminPinOverlay">
   <div class="overlay-card">
@@ -954,6 +1052,14 @@ const GAME_CONFIG = (function() {
       </div>
     </div>
 
+    <!-- Team Members -->
+    <div class="admin-section">
+      <div class="admin-section-title">👥 Team Members</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.4">Each member gets their own tap button at every checkpoint. Leave empty for solo play.</p>
+      <div id="teamContainer"></div>
+      <button class="btn-add-cp" style="border-color:#b8e6c6;color:var(--green)" onclick="addTeamMember()">＋ Add Team Member</button>
+    </div>
+
     <!-- Checkpoints -->
     <div class="admin-section">
       <div class="admin-section-title">📍 Checkpoints</div>
@@ -977,12 +1083,17 @@ const GAME_CONFIG = (function() {
 // ══════════════════════════════════════
 //  GAME STATE
 // ══════════════════════════════════════
+const TAPIN_COLORS = ['#f97316','#3a86ff','#2d9a4e','#7c3aed','#e84040','#f5a623','#06b6d4','#ec4899'];
+
 let currentCheckpoint = 0;
 let map, playerMarker, targetMarker, accuracyCircle, routeLine;
 let watchId = null;
 let playerPos = null;
 let isTracking = false;
 let foundCooldown = false;
+
+// Tap-in state
+let tapInTapped = new Set();
 
 let CP = GAME_CONFIG.checkpoints;
 let TOTAL = CP.length;
@@ -1193,8 +1304,67 @@ function checkProximity() {
   const dist = haversine(playerPos.lat, playerPos.lng, cp.lat, cp.lng);
   if (dist <= RADIUS) {
     foundCooldown = true;
-    onCheckpointReached();
+    initiateTapIn();
   }
+}
+
+// ══════════════════════════════════════
+//  TAP-IN
+// ══════════════════════════════════════
+function initiateTapIn() {
+  const team = GAME_CONFIG.team || [];
+  if (team.length <= 1) { onCheckpointReached(); return; }
+
+  tapInTapped = new Set();
+  document.getElementById('tapInTitle').textContent =
+    `Checkpoint ${currentCheckpoint + 1} — Tap In!`;
+
+  const grid = document.getElementById('tapInGrid');
+  grid.innerHTML = '';
+  team.forEach((name, i) => {
+    const color = TAPIN_COLORS[i % TAPIN_COLORS.length];
+    const btn = document.createElement('button');
+    btn.className = 'tapin-btn';
+    btn.id = `tapin-btn-${i}`;
+    btn.style.borderColor = color;
+    btn.style.color = color;
+    btn.innerHTML = `<span class="tapin-check">✓</span><span class="tapin-name">${escapeHtml(name)}</span>`;
+    btn.onclick = () => tapInPress(i, color);
+    grid.appendChild(btn);
+  });
+
+  updateTapInProgress();
+  document.getElementById('tapInOverlay').classList.remove('hidden');
+}
+
+function tapInPress(i, color) {
+  if (tapInTapped.has(i)) return;
+  tapInTapped.add(i);
+  const btn = document.getElementById(`tapin-btn-${i}`);
+  btn.classList.add('tapped');
+  btn.style.backgroundColor = color;
+  updateTapInProgress();
+
+  if (tapInTapped.size === (GAME_CONFIG.team || []).length) {
+    document.getElementById('tapInProgress').classList.add('complete');
+    setTimeout(() => {
+      document.getElementById('tapInOverlay').classList.add('hidden');
+      onCheckpointReached();
+    }, 700);
+  }
+}
+
+function updateTapInProgress() {
+  const total = (GAME_CONFIG.team || []).length;
+  const done = tapInTapped.size;
+  const el = document.getElementById('tapInProgress');
+  el.textContent = done === total ? '🎉 Everyone\'s here!' : `${done} of ${total} tapped in`;
+}
+
+function cancelTapIn() {
+  document.getElementById('tapInOverlay').classList.add('hidden');
+  foundCooldown = false;
+  tapInTapped = new Set();
 }
 
 // ══════════════════════════════════════
@@ -1332,7 +1502,39 @@ function renderAdminForm() {
   document.getElementById('adminWinMsg').value = editingConfig.winMessage;
   document.getElementById('adminPrize').value = editingConfig.prizeText;
   document.getElementById('adminNewPin').value = '';
+  if (!editingConfig.team) editingConfig.team = [];
+  renderTeam();
   renderCheckpoints();
+}
+
+function renderTeam() {
+  const container = document.getElementById('teamContainer');
+  container.innerHTML = '';
+  (editingConfig.team || []).forEach((name, i) => {
+    const row = document.createElement('div');
+    row.className = 'team-member-row';
+    row.innerHTML = `
+      <div class="team-color-dot" style="background:${TAPIN_COLORS[i % TAPIN_COLORS.length]}"></div>
+      <input class="form-input" type="text" value="${escapeHtml(name)}"
+        placeholder="Team member name" style="margin:0;flex:1"
+        oninput="editingConfig.team[${i}] = this.value">
+      <button class="btn-remove" onclick="removeTeamMember(${i})">✕</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function addTeamMember() {
+  if (!editingConfig.team) editingConfig.team = [];
+  editingConfig.team.push('');
+  renderTeam();
+  const inputs = document.querySelectorAll('#teamContainer .form-input');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function removeTeamMember(i) {
+  editingConfig.team.splice(i, 1);
+  renderTeam();
 }
 
 function renderCheckpoints() {
@@ -1458,6 +1660,8 @@ function saveAdmin() {
   editingConfig.unlockRadius = radius;
   editingConfig.winMessage = winMsg;
   editingConfig.prizeText = prize;
+  editingConfig.team = Array.from(document.querySelectorAll('#teamContainer .form-input'))
+    .map(el => el.value.trim()).filter(Boolean);
 
   // Read checkpoint fields one more time to catch any un-fired oninput events
   editingConfig.checkpoints.forEach((cp, i) => {
@@ -1504,6 +1708,8 @@ function reinitGame() {
   playerPos = null;
   isTracking = false;
   foundCooldown = false;
+  tapInTapped = new Set();
+  document.getElementById('tapInOverlay').classList.add('hidden');
 
   // Clear map layers
   if (playerMarker) { map.removeLayer(playerMarker); playerMarker = null; }
