@@ -777,7 +777,8 @@ const DEFAULTS = {
       { lat: 53.3755, lng: -6.2022, clue: "Almost there! Make your way to the red gate at the far end of the field.", hint: "Checkpoint 5 — FINAL!" }
     ],
     winMessage: "You found it! 🎉",
-    prizeText: "🍦 Claim your ice cream at the finish line!"
+    prizeText: "🍦 Claim your ice cream at the finish line!",
+    team: []
   },
   orienteering: {
     title: "Orienteering 🧭",
@@ -790,9 +791,12 @@ const DEFAULTS = {
       { lat: 53.3755, lng: -6.2022, label: "Control 5", hint: "At the red gate",        reveals: "E" }
     ],
     winMessage: "You found all the controls!",
-    answer: "🍎 The answer is: APPLE"
+    answer: "🍎 The answer is: APPLE",
+    team: []
   }
 };
+
+const TAPIN_COLORS = ['#f97316','#3a86ff','#2d9a4e','#7c3aed','#e84040','#f5a623','#06b6d4','#ec4899'];
 
 const STORAGE_KEYS = {
   treasure: 'th_admin_treasure_config',
@@ -947,11 +951,20 @@ function renderTreasureConfig() {
     </div>
 
     <div class="section">
+      <div class="section-title">👥 Team Members</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.4">Each member gets their own tap button at every checkpoint. Leave empty for solo play.</p>
+      <div id="teamContainer"></div>
+      <button class="btn-add-cp" style="border-color:#b8e6c6;color:#1e6e36" onclick="addTeamMember()">＋ Add Team Member</button>
+    </div>
+
+    <div class="section">
       <div class="section-title">📍 Checkpoints</div>
       <div id="cpContainer"></div>
       <button class="btn-add-cp" onclick="addCheckpoint()">＋ Add Checkpoint</button>
     </div>
   `;
+  if (!editingConfig.team) editingConfig.team = [];
+  renderTeam();
   renderTreasureCheckpoints();
 }
 
@@ -1022,11 +1035,20 @@ function renderOrienteeringConfig() {
     </div>
 
     <div class="section">
+      <div class="section-title">👥 Team Members</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.4">Each member gets their own tap button at every control. Leave empty for solo play.</p>
+      <div id="teamContainer"></div>
+      <button class="btn-add-cp" style="border-color:#c4b5fd;color:#5b21b6" onclick="addTeamMember()">＋ Add Team Member</button>
+    </div>
+
+    <div class="section">
       <div class="section-title">🟠 Controls</div>
       <div id="cpContainer"></div>
       <button class="btn-add-cp" onclick="addCheckpoint()">＋ Add Control</button>
     </div>
   `;
+  if (!editingConfig.team) editingConfig.team = [];
+  renderTeam();
   renderOrienteeringCheckpoints();
 }
 
@@ -1136,6 +1158,37 @@ function useGps(i) {
   }, err => showToast("GPS error: " + err.message), { enableHighAccuracy: true, timeout: 10000 });
 }
 
+function renderTeam() {
+  const container = document.getElementById('teamContainer');
+  if (!container) return;
+  container.innerHTML = '';
+  (editingConfig.team || []).forEach((name, i) => {
+    const row = document.createElement('div');
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
+    row.innerHTML = `
+      <div style="width:26px;height:26px;border-radius:50%;flex-shrink:0;background:${TAPIN_COLORS[i % TAPIN_COLORS.length]}"></div>
+      <input class="form-input" type="text" value="${esc(name)}"
+        placeholder="Team member name" style="margin:0;flex:1"
+        oninput="editingConfig.team[${i}] = this.value">
+      <button class="btn-remove" onclick="removeTeamMember(${i})">✕</button>
+    `;
+    container.appendChild(row);
+  });
+}
+
+function addTeamMember() {
+  if (!editingConfig.team) editingConfig.team = [];
+  editingConfig.team.push('');
+  renderTeam();
+  const inputs = document.querySelectorAll('#teamContainer .form-input');
+  if (inputs.length) inputs[inputs.length - 1].focus();
+}
+
+function removeTeamMember(i) {
+  editingConfig.team.splice(i, 1);
+  renderTeam();
+}
+
 // ── Harvest top-level fields before generating ──
 function harvestTopFields() {
   editingConfig.title = (document.getElementById('cfgTitle')?.value.trim()) || editingConfig.title;
@@ -1146,6 +1199,8 @@ function harvestTopFields() {
   } else {
     editingConfig.answer = document.getElementById('cfgAnswer')?.value.trim() || editingConfig.answer;
   }
+  editingConfig.team = Array.from(document.querySelectorAll('#teamContainer .form-input'))
+    .map(el => el.value.trim()).filter(Boolean);
 }
 
 // ══════════════════════════════════════
