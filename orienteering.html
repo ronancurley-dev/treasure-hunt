@@ -1,0 +1,1410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Orienteering</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --green: #2d9a4e;
+    --green-dark: #1e6e36;
+    --green-light: #e8f7ed;
+    --gold: #f5a623;
+    --gold-dark: #c7820f;
+    --red: #e84040;
+    --orange: #f97316;
+    --orange-dark: #c2550f;
+    --orange-light: #fff4ed;
+    --blue: #3a86ff;
+    --purple: #7c3aed;
+    --purple-light: #f3f0ff;
+    --sky: #e8f4ff;
+    --bg: #f0faf3;
+    --card: #ffffff;
+    --text: #1a2e1f;
+    --muted: #6b8a72;
+    --radius: 20px;
+    --shadow: 0 4px 24px rgba(30,110,54,0.13);
+    --shadow-lg: 0 8px 40px rgba(30,110,54,0.18);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Nunito', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100dvh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    background: linear-gradient(135deg, #5b21b6 0%, var(--purple) 100%);
+    color: white;
+    padding: 12px 16px 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.3);
+    z-index: 100;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 10px; }
+  .header-right { display: flex; align-items: center; gap: 8px; }
+
+  .header-icon {
+    font-size: 28px;
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  }
+
+  .header-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 22px;
+    letter-spacing: 0.5px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .collected-badge {
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.4);
+    border-radius: 50px;
+    padding: 4px 14px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+  }
+
+  .settings-btn {
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    width: 34px;
+    height: 34px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background 0.2s;
+    flex-shrink: 0;
+  }
+  .settings-btn:active { background: rgba(255,255,255,0.3); }
+
+  /* ── MAP ── */
+  #map {
+    flex: 1;
+    min-height: 0;
+    z-index: 1;
+  }
+
+  /* ── BOTTOM PANEL ── */
+  .bottom-panel {
+    background: var(--card);
+    border-radius: var(--radius) var(--radius) 0 0;
+    box-shadow: 0 -4px 24px rgba(30,110,54,0.15);
+    padding: 14px 16px 18px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+
+  .panel-drag {
+    width: 40px;
+    height: 4px;
+    background: #d0d0e8;
+    border-radius: 2px;
+    margin: 0 auto 12px;
+  }
+
+  .panel-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 10px;
+    gap: 8px;
+  }
+
+  .panel-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--purple);
+  }
+
+  .panel-hint {
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+
+  /* Letter cards */
+  .letters-scroll {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    margin-bottom: 12px;
+    scrollbar-width: none;
+  }
+  .letters-scroll::-webkit-scrollbar { display: none; }
+
+  .letter-card {
+    flex-shrink: 0;
+    width: 48px;
+    height: 56px;
+    border-radius: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    border: 2.5px solid #e0e0f0;
+    background: #f8f8ff;
+    transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    position: relative;
+    overflow: hidden;
+  }
+
+  .letter-card.collected {
+    border-color: var(--purple);
+    background: var(--purple-light);
+    animation: card-pop 0.5s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes card-pop {
+    0% { transform: scale(0.6); opacity: 0.5; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .letter-card-num {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .letter-card.collected .letter-card-num { color: var(--purple); }
+
+  .letter-card-value {
+    font-family: 'Fredoka One', cursive;
+    font-size: 22px;
+    color: #ccc;
+    line-height: 1;
+  }
+  .letter-card.collected .letter-card-value { color: var(--purple); }
+
+  /* GPS button */
+  .gps-btn {
+    width: 100%;
+    padding: 13px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Fredoka One', cursive;
+    font-size: 17px;
+    letter-spacing: 0.5px;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--purple) 0%, #5b21b6 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.35);
+  }
+  .gps-btn:active { transform: scale(0.97); }
+  .gps-btn.tracking {
+    background: linear-gradient(135deg, var(--blue) 0%, #1a5fd4 100%);
+    box-shadow: 0 4px 14px rgba(58,134,255,0.35);
+  }
+
+  /* ── OVERLAYS ── */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(6px);
+  }
+  .overlay.hidden { display: none; }
+
+  .overlay-card {
+    background: white;
+    border-radius: 28px;
+    padding: 32px 28px;
+    max-width: 380px;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    animation: pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
+  }
+
+  @keyframes pop-in {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .overlay-emoji { font-size: 64px; margin-bottom: 12px; }
+  .overlay-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 28px;
+    color: var(--purple);
+    margin-bottom: 8px;
+  }
+  .overlay-sub {
+    font-size: 15px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 20px;
+  }
+
+  .reveal-box {
+    background: var(--purple-light);
+    border: 2px solid #c4b5fd;
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 20px;
+  }
+  .reveal-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--purple);
+    margin-bottom: 6px;
+  }
+  .reveal-value {
+    font-family: 'Fredoka One', cursive;
+    font-size: 52px;
+    color: var(--purple);
+    line-height: 1;
+  }
+
+  .overlay-btn {
+    width: 100%;
+    padding: 15px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Fredoka One', cursive;
+    font-size: 19px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, var(--purple) 0%, #5b21b6 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.35);
+  }
+  .overlay-btn:active { transform: scale(0.97); }
+  .overlay-btn.gold {
+    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
+    box-shadow: 0 4px 14px rgba(245,166,35,0.4);
+  }
+
+  /* Start screen */
+  .start-list {
+    text-align: left;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+  }
+  .start-list li {
+    padding: 7px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 1px solid #eef0f8;
+    display: flex;
+    gap: 8px;
+  }
+
+  /* Win screen */
+  .win-letters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: center;
+    margin-bottom: 16px;
+  }
+  .win-letter {
+    width: 44px;
+    height: 52px;
+    border-radius: 10px;
+    background: var(--purple-light);
+    border: 2px solid #c4b5fd;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+  }
+  .win-letter-num {
+    font-size: 9px;
+    font-weight: 800;
+    color: var(--purple);
+    text-transform: uppercase;
+  }
+  .win-letter-val {
+    font-family: 'Fredoka One', cursive;
+    font-size: 20px;
+    color: var(--purple);
+  }
+
+  .answer-box {
+    background: linear-gradient(135deg, #fffbe6, #fff3c4);
+    border: 2px solid var(--gold);
+    border-radius: 14px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--gold-dark);
+  }
+
+  .win-stars {
+    font-size: 40px;
+    margin-bottom: 8px;
+    animation: spin-stars 2s linear infinite;
+  }
+  @keyframes spin-stars {
+    0% { transform: rotate(0deg) scale(1); }
+    50% { transform: rotate(180deg) scale(1.15); }
+    100% { transform: rotate(360deg) scale(1); }
+  }
+
+  /* ── MAP MARKERS ── */
+  .control-marker {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: var(--orange);
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: 'Fredoka One', cursive;
+    font-size: 13px;
+    color: white;
+    transition: all 0.3s;
+  }
+  .control-marker.visited {
+    background: var(--green);
+    border-color: var(--green-dark);
+    animation: none;
+  }
+  .control-marker.nearby {
+    animation: control-pulse 1s ease-in-out infinite;
+  }
+  @keyframes control-pulse {
+    0%, 100% { box-shadow: 0 0 0 0 rgba(249,115,22,0.5); }
+    50% { box-shadow: 0 0 0 10px rgba(249,115,22,0); }
+  }
+
+  .my-location-marker {
+    background: var(--blue);
+    border: 3px solid white;
+    border-radius: 50%;
+    box-shadow: 0 0 0 5px rgba(58,134,255,0.3);
+    animation: gps-pulse 2s ease-out infinite;
+  }
+  @keyframes gps-pulse {
+    0% { box-shadow: 0 0 0 5px rgba(58,134,255,0.3); }
+    100% { box-shadow: 0 0 0 18px rgba(58,134,255,0); }
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #333;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    z-index: 9999;
+    transition: transform 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* Leaflet overrides */
+  .leaflet-control-zoom { border-radius: 12px !important; overflow: hidden; }
+  .leaflet-control-zoom a { font-size: 18px !important; }
+
+  /* ── ADMIN STYLES ── */
+  .admin-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1100;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .admin-overlay.hidden { display: none; }
+
+  .admin-topbar {
+    background: linear-gradient(135deg, #5b21b6 0%, var(--purple) 100%);
+    color: white;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-shrink: 0;
+    box-shadow: 0 2px 12px rgba(124,58,237,0.3);
+  }
+  .admin-topbar-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 20px;
+    letter-spacing: 0.4px;
+  }
+  .admin-close-btn {
+    background: rgba(255,255,255,0.2);
+    border: 2px solid rgba(255,255,255,0.35);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    color: white;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    transition: background 0.2s;
+  }
+  .admin-close-btn:active { background: rgba(255,255,255,0.35); }
+
+  .admin-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .admin-footer {
+    background: white;
+    padding: 12px 16px;
+    border-top: 2px solid #e8e0f8;
+    flex-shrink: 0;
+    display: flex;
+    gap: 10px;
+  }
+
+  .admin-section {
+    background: white;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+  .admin-section-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 17px;
+    color: var(--purple);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .form-group { margin-bottom: 12px; }
+  .form-group:last-child { margin-bottom: 0; }
+  .form-label {
+    display: block;
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .form-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0d8f8;
+    border-radius: 10px;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+    background: white;
+    transition: border-color 0.2s;
+    resize: vertical;
+  }
+  .form-input:focus { outline: none; border-color: var(--purple); }
+
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 56px; gap: 8px; }
+
+  .cp-card {
+    border: 2px solid #e0d8f8;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: var(--purple-light);
+  }
+  .cp-card:last-child { margin-bottom: 0; }
+  .cp-card-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+  }
+  .cp-number {
+    font-family: 'Fredoka One', cursive;
+    font-size: 15px;
+    color: var(--purple);
+  }
+  .btn-remove {
+    background: #fff0f0;
+    border: 2px solid #fcc;
+    border-radius: 8px;
+    padding: 4px 10px;
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--red);
+    cursor: pointer;
+  }
+  .btn-remove:active { background: #ffe0e0; }
+
+  .btn-use-gps {
+    width: 100%;
+    padding: 8px 12px;
+    border-radius: 10px;
+    border: 2px solid #c4b5fd;
+    background: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--purple);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 10px;
+  }
+  .btn-use-gps:active { background: var(--purple-light); }
+
+  .reveals-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid #e0d8f8;
+    border-radius: 10px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 22px;
+    color: var(--purple);
+    text-align: center;
+    text-transform: uppercase;
+    background: white;
+    transition: border-color 0.2s;
+  }
+  .reveals-input:focus { outline: none; border-color: var(--purple); }
+
+  .btn-add-cp {
+    width: 100%;
+    padding: 12px;
+    border-radius: 12px;
+    border: 2px dashed #c4b5fd;
+    background: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 15px;
+    color: var(--purple);
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-top: 4px;
+  }
+  .btn-add-cp:active { background: var(--purple-light); border-style: solid; }
+
+  .btn-save {
+    flex: 1;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Fredoka One', cursive;
+    font-size: 18px;
+    cursor: pointer;
+    transition: all 0.2s;
+    background: linear-gradient(135deg, var(--purple) 0%, #5b21b6 100%);
+    color: white;
+    box-shadow: 0 4px 14px rgba(124,58,237,0.35);
+  }
+  .btn-save:active { transform: scale(0.97); }
+  .btn-reset {
+    padding: 14px 18px;
+    border-radius: 14px;
+    border: 2px solid #e0d8f8;
+    background: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 15px;
+    color: var(--muted);
+    cursor: pointer;
+    white-space: nowrap;
+  }
+  .btn-reset:active { background: #f5f5f5; }
+
+  /* PIN */
+  .pin-display {
+    font-family: 'Fredoka One', cursive;
+    font-size: 36px;
+    letter-spacing: 14px;
+    color: var(--purple);
+    margin: 12px 0 20px;
+    text-align: center;
+  }
+  .pin-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .pin-btn {
+    padding: 16px;
+    border-radius: 12px;
+    border: 2px solid #e0d8f8;
+    background: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 24px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pin-btn:active { transform: scale(0.9); background: var(--purple-light); }
+  .pin-btn.del { font-size: 20px; color: var(--red); }
+  .pin-btn.empty { background: transparent; border-color: transparent; pointer-events: none; }
+  .pin-error {
+    color: var(--red);
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    margin-top: 4px;
+    min-height: 20px;
+  }
+  .pin-cancel {
+    width: 100%;
+    padding: 10px;
+    border-radius: 12px;
+    border: 2px solid #e0d8f8;
+    background: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--muted);
+    cursor: pointer;
+    margin-top: 8px;
+  }
+</style>
+</head>
+<body>
+
+<script>
+const DEFAULT_GAME_CONFIG = {
+  title: "Orienteering 🧭",
+  unlockRadius: 20,
+  checkpoints: [
+    { lat: 53.3734, lng: -6.2052, label: "Control 1", hint: "Near the park entrance", reveals: "A" },
+    { lat: 53.3740, lng: -6.2045, label: "Control 2", hint: "By the picnic benches",  reveals: "P" },
+    { lat: 53.3745, lng: -6.2038, label: "Control 3", hint: "At the noticeboard",     reveals: "P" },
+    { lat: 53.3750, lng: -6.2030, label: "Control 4", hint: "Near the water fountain", reveals: "L" },
+    { lat: 53.3755, lng: -6.2022, label: "Control 5", hint: "At the red gate",        reveals: "E" }
+  ],
+  winMessage: "You found all the controls!",
+  answer: "🍎 The answer is: APPLE"
+};
+
+const GAME_CONFIG = (function() {
+  try {
+    const hash = window.location.hash.slice(1);
+    if (hash) {
+      const decoded = JSON.parse(decodeURIComponent(escape(atob(hash))));
+      return Object.assign({}, DEFAULT_GAME_CONFIG, decoded);
+    }
+  } catch(e) {}
+  return Object.assign({}, DEFAULT_GAME_CONFIG);
+})();
+</script>
+
+<!-- Header -->
+<header>
+  <div class="header-left">
+    <span class="header-icon">🧭</span>
+    <span class="header-title" id="gameTitle">Orienteering</span>
+  </div>
+  <div class="header-right">
+    <button class="settings-btn" onclick="openAdminPin()" title="Admin Settings">⚙️</button>
+    <span class="collected-badge" id="collectedBadge">0 / 5</span>
+  </div>
+</header>
+
+<div id="map"></div>
+
+<div class="bottom-panel">
+  <div class="panel-drag"></div>
+  <div class="panel-row">
+    <span class="panel-label">Collected</span>
+    <span class="panel-hint" id="panelHint">Visit all controls in any order</span>
+  </div>
+  <div class="letters-scroll" id="lettersScroll"></div>
+  <button class="gps-btn" id="gpsBtn" onclick="startTracking()">
+    <span>📍</span> Start GPS Tracking
+  </button>
+</div>
+
+<!-- Start overlay -->
+<div class="overlay" id="startOverlay">
+  <div class="overlay-card">
+    <div class="overlay-emoji">🧭</div>
+    <div class="overlay-title" id="startTitle">Orienteering</div>
+    <div class="overlay-sub">Find all the controls on the map — in any order you like!</div>
+    <ul class="start-list">
+      <li><span>🟠</span> Orange circles mark the controls</li>
+      <li><span>📍</span> Your location shows as a blue dot</li>
+      <li><span>✅</span> Controls turn green when you reach them</li>
+      <li><span>🔤</span> Each control reveals a letter or number</li>
+    </ul>
+    <button class="overlay-btn" onclick="dismissStart()">🚀 Let's Go!</button>
+  </div>
+</div>
+
+<!-- Control found overlay -->
+<div class="overlay hidden" id="foundOverlay">
+  <div class="overlay-card">
+    <div class="overlay-emoji">✅</div>
+    <div class="overlay-title" id="foundTitle">Control Found!</div>
+    <div class="overlay-sub" id="foundSub">You collected a new letter:</div>
+    <div class="reveal-box">
+      <div class="reveal-label">Your Letter</div>
+      <div class="reveal-value" id="revealValue">A</div>
+    </div>
+    <button class="overlay-btn" onclick="dismissFound()">👍 Keep Going!</button>
+  </div>
+</div>
+
+<!-- Win overlay -->
+<div class="overlay hidden" id="winOverlay">
+  <div class="overlay-card">
+    <div class="win-stars">⭐</div>
+    <div class="overlay-title">All Controls Found! 🏆</div>
+    <div class="overlay-sub" id="winMessage">You collected all the letters!</div>
+    <div class="win-letters" id="winLetters"></div>
+    <div class="answer-box" id="answerBox"></div>
+    <button class="overlay-btn gold" onclick="restartGame()">🔄 Play Again</button>
+  </div>
+</div>
+
+<!-- Admin PIN overlay -->
+<div class="overlay hidden" id="adminPinOverlay">
+  <div class="overlay-card">
+    <div class="overlay-emoji">🔐</div>
+    <div class="overlay-title" style="color:var(--purple)">Admin Access</div>
+    <div class="overlay-sub" style="margin-bottom:0">Enter your 4-digit PIN</div>
+    <div class="pin-display" id="pinDisplay">○ ○ ○ ○</div>
+    <div class="pin-pad">
+      <button class="pin-btn" onclick="pinPress('1')">1</button>
+      <button class="pin-btn" onclick="pinPress('2')">2</button>
+      <button class="pin-btn" onclick="pinPress('3')">3</button>
+      <button class="pin-btn" onclick="pinPress('4')">4</button>
+      <button class="pin-btn" onclick="pinPress('5')">5</button>
+      <button class="pin-btn" onclick="pinPress('6')">6</button>
+      <button class="pin-btn" onclick="pinPress('7')">7</button>
+      <button class="pin-btn" onclick="pinPress('8')">8</button>
+      <button class="pin-btn" onclick="pinPress('9')">9</button>
+      <button class="pin-btn empty"></button>
+      <button class="pin-btn" onclick="pinPress('0')">0</button>
+      <button class="pin-btn del" onclick="pinDelete()">⌫</button>
+    </div>
+    <div class="pin-error" id="pinError"></div>
+    <button class="pin-cancel" onclick="closeAdminPin()">Cancel</button>
+  </div>
+</div>
+
+<!-- Admin config overlay -->
+<div class="admin-overlay hidden" id="adminOverlay">
+  <div class="admin-topbar">
+    <span class="admin-topbar-title">⚙️ Game Configuration</span>
+    <button class="admin-close-btn" onclick="closeAdmin()">✕</button>
+  </div>
+  <div class="admin-body" id="adminBody">
+
+    <div class="admin-section">
+      <div class="admin-section-title">🧭 Game Settings</div>
+      <div class="form-group">
+        <label class="form-label">Game Title</label>
+        <input class="form-input" type="text" id="adminTitle" placeholder="Orienteering 🧭">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unlock Radius (metres)</label>
+          <input class="form-input" type="number" id="adminRadius" min="5" max="500" placeholder="20">
+        </div>
+        <div class="form-group">
+          <label class="form-label">New PIN (4 digits)</label>
+          <input class="form-input" type="password" id="adminNewPin" maxlength="4" pattern="\d{4}" placeholder="Leave blank to keep">
+        </div>
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">🏆 Win Screen</div>
+      <div class="form-group">
+        <label class="form-label">Win Message</label>
+        <input class="form-input" type="text" id="adminWinMsg" placeholder="You found all the controls!">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Answer / Prize Text (shown when all controls collected)</label>
+        <input class="form-input" type="text" id="adminAnswer" placeholder="🍎 The answer is: APPLE">
+      </div>
+    </div>
+
+    <div class="admin-section">
+      <div class="admin-section-title">🟠 Controls</div>
+      <div id="checkpointsContainer"></div>
+      <button class="btn-add-cp" onclick="addCheckpoint()">＋ Add Control</button>
+    </div>
+
+  </div>
+  <div class="admin-footer">
+    <button class="btn-reset" onclick="resetToDefaults()">Reset</button>
+    <button class="btn-save" onclick="saveAdmin()">🔗 Save &amp; Copy Link</button>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+// ══════════════════════════════════════
+//  GAME STATE
+// ══════════════════════════════════════
+let CP = GAME_CONFIG.checkpoints;
+let TOTAL = CP.length;
+let RADIUS = GAME_CONFIG.unlockRadius;
+
+let visited = new Set();
+let map, playerMarker, accuracyCircle;
+let controlMarkers = [];
+let watchId = null;
+let playerPos = null;
+let isTracking = false;
+let cooldown = new Set(); // prevent double-trigger per control
+
+// ══════════════════════════════════════
+//  INIT
+// ══════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  applyConfigToDOM();
+  initMap();
+  buildLetterCards();
+  updateBadge();
+});
+
+function applyConfigToDOM() {
+  document.getElementById('gameTitle').textContent = GAME_CONFIG.title;
+  document.getElementById('startTitle').textContent = GAME_CONFIG.title;
+  document.getElementById('winMessage').textContent = GAME_CONFIG.winMessage;
+  document.getElementById('answerBox').textContent = GAME_CONFIG.answer;
+}
+
+function initMap() {
+  // Fit map to show all controls
+  const lats = CP.map(c => c.lat);
+  const lngs = CP.map(c => c.lng);
+  const midLat = (Math.min(...lats) + Math.max(...lats)) / 2;
+  const midLng = (Math.min(...lngs) + Math.max(...lngs)) / 2;
+
+  map = L.map('map', {
+    center: [midLat, midLng],
+    zoom: 15,
+    zoomControl: true,
+    attributionControl: true
+  });
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19
+  }).addTo(map);
+
+  placeAllMarkers();
+
+  // Fit bounds to all controls with padding
+  if (CP.length > 1) {
+    const bounds = L.latLngBounds(CP.map(c => [c.lat, c.lng]));
+    map.fitBounds(bounds, { padding: [40, 40] });
+  }
+}
+
+function placeAllMarkers() {
+  controlMarkers.forEach(m => map.removeLayer(m));
+  controlMarkers = [];
+
+  CP.forEach((cp, i) => {
+    const isVisited = visited.has(i);
+    const icon = L.divIcon({
+      className: '',
+      html: `<div class="control-marker${isVisited ? ' visited' : ''}">${isVisited ? '✓' : (i + 1)}</div>`,
+      iconSize: [36, 36],
+      iconAnchor: [18, 18]
+    });
+
+    const marker = L.marker([cp.lat, cp.lng], { icon })
+      .addTo(map)
+      .bindPopup(`<b>${cp.label}</b><br><span style="color:#666;font-size:13px">${cp.hint}</span>`, { closeButton: false });
+
+    controlMarkers.push(marker);
+  });
+}
+
+function updateMarker(index) {
+  if (!controlMarkers[index]) return;
+  const isVisited = visited.has(index);
+  const icon = L.divIcon({
+    className: '',
+    html: `<div class="control-marker${isVisited ? ' visited' : ''}">${isVisited ? '✓' : (index + 1)}</div>`,
+    iconSize: [36, 36],
+    iconAnchor: [18, 18]
+  });
+  controlMarkers[index].setIcon(icon);
+}
+
+// ══════════════════════════════════════
+//  LETTER CARDS
+// ══════════════════════════════════════
+function buildLetterCards() {
+  const scroll = document.getElementById('lettersScroll');
+  scroll.innerHTML = '';
+  CP.forEach((cp, i) => {
+    const card = document.createElement('div');
+    card.className = 'letter-card' + (visited.has(i) ? ' collected' : '');
+    card.id = `card-${i}`;
+    card.innerHTML = `
+      <div class="letter-card-num">${i + 1}</div>
+      <div class="letter-card-value">${visited.has(i) ? escapeHtml(cp.reveals) : '?'}</div>
+    `;
+    scroll.appendChild(card);
+  });
+}
+
+function collectCard(index) {
+  const card = document.getElementById(`card-${index}`);
+  if (!card) return;
+  card.classList.add('collected');
+  card.querySelector('.letter-card-value').textContent = CP[index].reveals;
+}
+
+function updateBadge() {
+  document.getElementById('collectedBadge').textContent = `${visited.size} / ${TOTAL}`;
+  const remaining = TOTAL - visited.size;
+  document.getElementById('panelHint').textContent =
+    remaining === 0 ? 'All controls found!' :
+    remaining === 1 ? '1 control remaining' :
+    `${remaining} controls remaining`;
+}
+
+// ══════════════════════════════════════
+//  GPS TRACKING
+// ══════════════════════════════════════
+function dismissStart() {
+  document.getElementById('startOverlay').classList.add('hidden');
+}
+
+function startTracking() {
+  if (!navigator.geolocation) { showToast("GPS not available on this device"); return; }
+
+  if (isTracking) {
+    if (playerPos) map.setView([playerPos.lat, playerPos.lng], 17);
+    return;
+  }
+
+  isTracking = true;
+  const btn = document.getElementById('gpsBtn');
+  btn.className = 'gps-btn tracking';
+  btn.innerHTML = '<span>🔄</span> Getting GPS…';
+
+  watchId = navigator.geolocation.watchPosition(onPosition, onGpsError,
+    { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 });
+}
+
+function onPosition(pos) {
+  playerPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+  const acc = pos.coords.accuracy;
+
+  const playerIcon = L.divIcon({
+    className: 'my-location-marker',
+    iconSize: [18, 18],
+    iconAnchor: [9, 9]
+  });
+
+  if (!playerMarker) {
+    playerMarker = L.marker([playerPos.lat, playerPos.lng], { icon: playerIcon }).addTo(map);
+  } else {
+    playerMarker.setLatLng([playerPos.lat, playerPos.lng]);
+  }
+
+  if (accuracyCircle) map.removeLayer(accuracyCircle);
+  if (acc < 100) {
+    accuracyCircle = L.circle([playerPos.lat, playerPos.lng], {
+      radius: acc, color: '#3a86ff', fillColor: '#3a86ff', fillOpacity: 0.06, weight: 1
+    }).addTo(map);
+  }
+
+  document.getElementById('gpsBtn').className = 'gps-btn tracking';
+  document.getElementById('gpsBtn').innerHTML = '<span>📡</span> GPS Active — Tap to Re-centre';
+
+  checkAllProximity();
+}
+
+function onGpsError(err) {
+  showToast("GPS error: " + err.message);
+  document.getElementById('gpsBtn').className = 'gps-btn';
+  document.getElementById('gpsBtn').innerHTML = '<span>📍</span> Retry GPS';
+  isTracking = false;
+}
+
+function checkAllProximity() {
+  if (!playerPos) return;
+  CP.forEach((cp, i) => {
+    if (visited.has(i) || cooldown.has(i)) return;
+    const dist = haversine(playerPos.lat, playerPos.lng, cp.lat, cp.lng);
+
+    // Pulse marker when nearby (within 3× radius)
+    if (dist <= RADIUS * 3 && !visited.has(i)) {
+      const el = controlMarkers[i]?.getElement()?.querySelector('.control-marker');
+      if (el) el.classList.add('nearby');
+    } else {
+      const el = controlMarkers[i]?.getElement()?.querySelector('.control-marker');
+      if (el) el.classList.remove('nearby');
+    }
+
+    if (dist <= RADIUS) {
+      cooldown.add(i);
+      onControlReached(i);
+    }
+  });
+}
+
+// ══════════════════════════════════════
+//  CONTROL LOGIC
+// ══════════════════════════════════════
+function onControlReached(index) {
+  visited.add(index);
+  updateMarker(index);
+  collectCard(index);
+  updateBadge();
+
+  const cp = CP[index];
+  document.getElementById('foundTitle').textContent = `${cp.label} Found! ✅`;
+  document.getElementById('foundSub').textContent = `${cp.hint} — you collected:`;
+  document.getElementById('revealValue').textContent = cp.reveals;
+  document.getElementById('foundOverlay').classList.remove('hidden');
+}
+
+function dismissFound() {
+  document.getElementById('foundOverlay').classList.add('hidden');
+  if (visited.size === TOTAL) {
+    setTimeout(showWin, 400);
+  }
+}
+
+function showWin() {
+  if (watchId) navigator.geolocation.clearWatch(watchId);
+
+  // Build win letters display in checkpoint order
+  const winLetters = document.getElementById('winLetters');
+  winLetters.innerHTML = '';
+  CP.forEach((cp, i) => {
+    const div = document.createElement('div');
+    div.className = 'win-letter';
+    div.innerHTML = `<div class="win-letter-num">${i + 1}</div><div class="win-letter-val">${escapeHtml(cp.reveals)}</div>`;
+    winLetters.appendChild(div);
+  });
+
+  document.getElementById('winOverlay').classList.remove('hidden');
+}
+
+function restartGame() {
+  visited.clear();
+  cooldown.clear();
+  playerPos = null;
+  isTracking = false;
+  if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (playerMarker) { map.removeLayer(playerMarker); playerMarker = null; }
+  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
+
+  document.getElementById('winOverlay').classList.add('hidden');
+  document.getElementById('gpsBtn').className = 'gps-btn';
+  document.getElementById('gpsBtn').innerHTML = '<span>📍</span> Start GPS Tracking';
+
+  placeAllMarkers();
+  buildLetterCards();
+  updateBadge();
+}
+
+// ══════════════════════════════════════
+//  ADMIN — PIN
+// ══════════════════════════════════════
+const ADMIN_PIN_KEY = 'th_orient_pin';
+let adminPinInput = '';
+
+function getStoredPin() { return localStorage.getItem(ADMIN_PIN_KEY) || '1234'; }
+
+function openAdminPin() {
+  adminPinInput = '';
+  updatePinDisplay();
+  document.getElementById('pinError').textContent = '';
+  document.getElementById('adminPinOverlay').classList.remove('hidden');
+}
+function closeAdminPin() { document.getElementById('adminPinOverlay').classList.add('hidden'); }
+
+function pinPress(digit) {
+  if (adminPinInput.length >= 4) return;
+  adminPinInput += digit;
+  updatePinDisplay();
+  if (adminPinInput.length === 4) setTimeout(checkPin, 120);
+}
+function pinDelete() { adminPinInput = adminPinInput.slice(0, -1); updatePinDisplay(); }
+function updatePinDisplay() {
+  const dots = Array.from({length: 4}, (_, i) => i < adminPinInput.length ? '●' : '○');
+  document.getElementById('pinDisplay').textContent = dots.join(' ');
+}
+function checkPin() {
+  if (adminPinInput === getStoredPin()) { closeAdminPin(); openAdmin(); }
+  else {
+    document.getElementById('pinError').textContent = 'Incorrect PIN — try again';
+    adminPinInput = ''; updatePinDisplay();
+  }
+}
+
+// ══════════════════════════════════════
+//  ADMIN — CONFIG FORM
+// ══════════════════════════════════════
+let editingConfig = null;
+
+function openAdmin() {
+  editingConfig = JSON.parse(JSON.stringify(GAME_CONFIG));
+  renderAdminForm();
+  document.getElementById('adminOverlay').classList.remove('hidden');
+}
+function closeAdmin() { document.getElementById('adminOverlay').classList.add('hidden'); }
+
+function renderAdminForm() {
+  document.getElementById('adminTitle').value = editingConfig.title;
+  document.getElementById('adminRadius').value = editingConfig.unlockRadius;
+  document.getElementById('adminWinMsg').value = editingConfig.winMessage;
+  document.getElementById('adminAnswer').value = editingConfig.answer;
+  document.getElementById('adminNewPin').value = '';
+  renderCheckpoints();
+}
+
+function renderCheckpoints() {
+  const container = document.getElementById('checkpointsContainer');
+  container.innerHTML = '';
+  editingConfig.checkpoints.forEach((cp, i) => {
+    const card = document.createElement('div');
+    card.className = 'cp-card';
+    card.innerHTML = `
+      <div class="cp-card-header">
+        <span class="cp-number">🟠 Control ${i + 1}</span>
+        ${editingConfig.checkpoints.length > 1
+          ? `<button class="btn-remove" onclick="removeCheckpoint(${i})">✕ Remove</button>` : ''}
+      </div>
+      <button class="btn-use-gps" onclick="useGpsForCheckpoint(${i})">📍 Use Current GPS Location</button>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Latitude</label>
+          <input class="form-input" type="number" step="any" id="cp-lat-${i}"
+            value="${cp.lat}" oninput="updateCpField(${i},'lat',this.value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude</label>
+          <input class="form-input" type="number" step="any" id="cp-lng-${i}"
+            value="${cp.lng}" oninput="updateCpField(${i},'lng',this.value)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Label (on map marker)</label>
+          <input class="form-input" type="text" id="cp-label-${i}"
+            value="${escapeHtml(cp.label)}" oninput="updateCpField(${i},'label',this.value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reveals (letter or number)</label>
+          <input class="reveals-input" type="text" maxlength="3" id="cp-reveals-${i}"
+            value="${escapeHtml(cp.reveals)}" oninput="updateCpField(${i},'reveals',this.value.toUpperCase().trim())">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hint (shown in popup)</label>
+        <input class="form-input" type="text" id="cp-hint-${i}"
+          value="${escapeHtml(cp.hint)}" oninput="updateCpField(${i},'hint',this.value)">
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function updateCpField(index, field, value) {
+  if (field === 'lat' || field === 'lng') {
+    editingConfig.checkpoints[index][field] = parseFloat(value) || 0;
+  } else {
+    editingConfig.checkpoints[index][field] = value;
+  }
+}
+
+function removeCheckpoint(index) {
+  editingConfig.checkpoints.splice(index, 1);
+  renderCheckpoints();
+}
+
+function addCheckpoint() {
+  const cps = editingConfig.checkpoints;
+  const last = cps[cps.length - 1];
+  cps.push({
+    lat: last ? parseFloat((last.lat + 0.0005).toFixed(6)) : 53.3734,
+    lng: last ? parseFloat((last.lng + 0.0005).toFixed(6)) : -6.2052,
+    label: `Control ${cps.length + 1}`,
+    hint: "Describe where to find this control",
+    reveals: "?"
+  });
+  renderCheckpoints();
+  setTimeout(() => {
+    document.getElementById('adminBody').scrollTop = document.getElementById('adminBody').scrollHeight;
+  }, 50);
+}
+
+function useGpsForCheckpoint(index) {
+  if (!navigator.geolocation) { showToast("GPS not available"); return; }
+  showToast("Getting GPS…");
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = parseFloat(pos.coords.latitude.toFixed(6));
+    const lng = parseFloat(pos.coords.longitude.toFixed(6));
+    editingConfig.checkpoints[index].lat = lat;
+    editingConfig.checkpoints[index].lng = lng;
+    const latEl = document.getElementById(`cp-lat-${index}`);
+    const lngEl = document.getElementById(`cp-lng-${index}`);
+    if (latEl) latEl.value = lat;
+    if (lngEl) lngEl.value = lng;
+    showToast("Location set!");
+  }, err => showToast("GPS error: " + err.message), { enableHighAccuracy: true, timeout: 10000 });
+}
+
+function resetToDefaults() {
+  if (!confirm('Reset to default configuration?')) return;
+  editingConfig = JSON.parse(JSON.stringify(DEFAULT_GAME_CONFIG));
+  renderAdminForm();
+}
+
+function saveAdmin() {
+  const title = document.getElementById('adminTitle').value.trim();
+  const radius = parseInt(document.getElementById('adminRadius').value);
+  const winMsg = document.getElementById('adminWinMsg').value.trim();
+  const answer = document.getElementById('adminAnswer').value.trim();
+  const newPin = document.getElementById('adminNewPin').value.trim();
+
+  if (!title) { showToast("Title cannot be empty"); return; }
+  if (!radius || radius < 1) { showToast("Unlock radius must be at least 1m"); return; }
+  if (editingConfig.checkpoints.length < 1) { showToast("Need at least 1 control"); return; }
+  if (newPin && !/^\d{4}$/.test(newPin)) { showToast("PIN must be exactly 4 digits"); return; }
+
+  editingConfig.title = title;
+  editingConfig.unlockRadius = radius;
+  editingConfig.winMessage = winMsg;
+  editingConfig.answer = answer;
+
+  // Final read of all checkpoint fields
+  editingConfig.checkpoints.forEach((cp, i) => {
+    ['lat','lng','label','hint','reveals'].forEach(f => {
+      const el = document.getElementById(`cp-${f}-${i}`);
+      if (!el) return;
+      if (f === 'lat' || f === 'lng') cp[f] = parseFloat(el.value) || 0;
+      else cp[f] = el.value;
+    });
+  });
+
+  if (newPin) localStorage.setItem(ADMIN_PIN_KEY, newPin);
+
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(editingConfig))));
+  history.replaceState(null, '', '#' + encoded);
+
+  Object.assign(GAME_CONFIG, editingConfig);
+  CP = GAME_CONFIG.checkpoints;
+  TOTAL = CP.length;
+  RADIUS = GAME_CONFIG.unlockRadius;
+
+  closeAdmin();
+  reinitGame();
+
+  navigator.clipboard.writeText(window.location.href).then(() => {
+    showToast("Link copied — share it with your players!");
+  }).catch(() => {
+    showToast("Config saved! Copy the URL from your browser to share.");
+  });
+}
+
+function reinitGame() {
+  visited.clear();
+  cooldown.clear();
+  playerPos = null;
+  isTracking = false;
+  if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
+  if (playerMarker) { map.removeLayer(playerMarker); playerMarker = null; }
+  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
+
+  document.getElementById('gpsBtn').className = 'gps-btn';
+  document.getElementById('gpsBtn').innerHTML = '<span>📍</span> Start GPS Tracking';
+  document.getElementById('winOverlay').classList.add('hidden');
+  document.getElementById('foundOverlay').classList.add('hidden');
+
+  applyConfigToDOM();
+  placeAllMarkers();
+  buildLetterCards();
+  updateBadge();
+
+  if (CP.length > 1) {
+    const bounds = L.latLngBounds(CP.map(c => [c.lat, c.lng]));
+    map.fitBounds(bounds, { padding: [40, 40] });
+  } else {
+    map.setView([CP[0].lat, CP[0].lng], 16);
+  }
+}
+
+// ══════════════════════════════════════
+//  UTILS
+// ══════════════════════════════════════
+function haversine(lat1, lon1, lat2, lon2) {
+  const R = 6371000;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) ** 2 +
+            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+function escapeHtml(str) {
+  return String(str)
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+</body>
+</html>
