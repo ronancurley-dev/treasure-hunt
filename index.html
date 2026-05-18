@@ -3,10 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-<title>Treasure Hunt</title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<title>Game Admin</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <style>
   :root {
     --green: #2d9a4e;
@@ -14,16 +14,20 @@
     --green-light: #e8f7ed;
     --gold: #f5a623;
     --gold-dark: #c7820f;
+    --purple: #7c3aed;
+    --purple-dark: #5b21b6;
+    --purple-light: #f3f0ff;
+    --orange: #f97316;
     --red: #e84040;
     --blue: #3a86ff;
-    --sky: #e8f4ff;
-    --bg: #f0faf3;
+    --bg: #f5f3ff;
     --card: #ffffff;
-    --text: #1a2e1f;
-    --muted: #6b8a72;
-    --radius: 20px;
-    --shadow: 0 4px 24px rgba(30,110,54,0.13);
-    --shadow-lg: 0 8px 40px rgba(30,110,54,0.18);
+    --text: #1e1b4b;
+    --muted: #6b7280;
+    --border: #e5e1ff;
+    --shadow: 0 4px 24px rgba(124,58,237,0.1);
+    --shadow-lg: 0 8px 40px rgba(124,58,237,0.18);
+    --radius: 18px;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -39,574 +43,272 @@
   }
 
   /* ── HEADER ── */
-  header {
-    background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
+  .app-header {
+    background: linear-gradient(135deg, var(--purple-dark) 0%, var(--purple) 100%);
     color: white;
-    padding: 12px 16px 10px;
+    padding: 14px 16px 12px;
     display: flex;
     align-items: center;
-    justify-content: space-between;
-    gap: 8px;
+    gap: 10px;
     flex-shrink: 0;
-    box-shadow: 0 2px 12px rgba(30,110,54,0.25);
-    z-index: 100;
+    box-shadow: 0 2px 16px rgba(91,33,182,0.3);
+    z-index: 10;
   }
 
-  .header-left { display: flex; align-items: center; gap: 10px; }
-  .header-right { display: flex; align-items: center; gap: 8px; }
-
-  .header-icon {
-    font-size: 28px;
-    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+  .app-header-back {
+    background: rgba(255,255,255,0.15);
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    width: 36px;
+    height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    flex-shrink: 0;
+    transition: background 0.2s;
   }
+  .app-header-back:active { background: rgba(255,255,255,0.3); }
+  .app-header-back.hidden { visibility: hidden; pointer-events: none; }
 
-  .header-title {
+  .app-header-title {
     font-family: 'Fredoka One', cursive;
     font-size: 22px;
     letter-spacing: 0.5px;
-    text-shadow: 0 1px 3px rgba(0,0,0,0.2);
+    flex: 1;
   }
 
-  .checkpoint-badge {
+  .app-header-badge {
     background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.4);
+    border: 2px solid rgba(255,255,255,0.35);
     border-radius: 50px;
-    padding: 4px 14px;
-    font-size: 13px;
+    padding: 3px 12px;
+    font-size: 12px;
     font-weight: 800;
     letter-spacing: 0.3px;
     white-space: nowrap;
   }
 
-  .settings-btn {
-    background: rgba(255,255,255,0.15);
-    border: 2px solid rgba(255,255,255,0.3);
-    border-radius: 50%;
-    width: 34px;
-    height: 34px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    font-size: 16px;
-    transition: background 0.2s;
-    flex-shrink: 0;
-  }
-  .settings-btn:active { background: rgba(255,255,255,0.3); }
-
-  /* ── PROGRESS DOTS ── */
-  .progress-bar {
-    background: var(--green-dark);
-    padding: 8px 16px 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0;
-    flex-shrink: 0;
-  }
-
-  .progress-step {
-    display: flex;
-    align-items: center;
-  }
-
-  .dot {
-    width: 28px;
-    height: 28px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 12px;
-    font-weight: 800;
-    transition: all 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    border: 3px solid rgba(255,255,255,0.25);
-    color: rgba(255,255,255,0.5);
-    background: rgba(255,255,255,0.1);
-  }
-
-  .dot.done {
-    background: var(--gold);
-    border-color: var(--gold-dark);
-    color: white;
-    transform: scale(1.1);
-    box-shadow: 0 0 12px rgba(245,166,35,0.6);
-  }
-
-  .dot.current {
-    background: white;
-    border-color: var(--gold);
-    color: var(--green-dark);
-    transform: scale(1.2);
-    animation: pulse-dot 1.6s ease-in-out infinite;
-  }
-
-  .dot.trophy { font-size: 14px; }
-
-  @keyframes pulse-dot {
-    0%, 100% { box-shadow: 0 0 0 0 rgba(255,255,255,0.4); }
-    50% { box-shadow: 0 0 0 6px rgba(255,255,255,0); }
-  }
-
-  .connector {
-    width: 24px;
-    height: 3px;
-    background: rgba(255,255,255,0.2);
-    transition: background 0.4s;
-  }
-
-  .connector.done { background: var(--gold); }
-
-  /* ── MAP ── */
-  #map {
+  /* ── VIEWS ── */
+  .view {
     flex: 1;
-    min-height: 0;
-    z-index: 1;
-  }
-
-  /* ── BOTTOM PANEL ── */
-  .bottom-panel {
-    background: var(--card);
-    border-radius: var(--radius) var(--radius) 0 0;
-    box-shadow: 0 -4px 24px rgba(30,110,54,0.15);
-    padding: 16px 20px 20px;
-    flex-shrink: 0;
-    z-index: 100;
-    max-height: 46vh;
     overflow-y: auto;
+    display: none;
+    flex-direction: column;
+  }
+  .view.active { display: flex; }
+
+  /* ── PIN VIEW ── */
+  .pin-view {
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: var(--bg);
   }
 
-  .panel-drag {
-    width: 40px;
-    height: 4px;
-    background: #d0e8d6;
-    border-radius: 2px;
-    margin: 0 auto 14px;
+  .pin-card {
+    background: white;
+    border-radius: 28px;
+    padding: 32px 28px;
+    max-width: 360px;
+    width: 100%;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
   }
 
-  /* clue card */
-  .clue-card {
-    background: var(--green-light);
-    border: 2px solid #b8e6c6;
-    border-radius: 14px;
-    padding: 14px 16px;
-    margin-bottom: 14px;
-    display: flex;
-    gap: 12px;
-    align-items: flex-start;
-  }
-
-  .clue-icon {
+  .pin-emoji { font-size: 56px; margin-bottom: 10px; }
+  .pin-title {
+    font-family: 'Fredoka One', cursive;
     font-size: 26px;
-    flex-shrink: 0;
-    margin-top: 2px;
+    color: var(--purple);
+    margin-bottom: 6px;
+  }
+  .pin-sub { font-size: 14px; color: var(--muted); margin-bottom: 0; }
+
+  .pin-display {
+    font-family: 'Fredoka One', cursive;
+    font-size: 36px;
+    letter-spacing: 14px;
+    color: var(--purple);
+    margin: 16px 0 20px;
   }
 
-  .clue-label {
-    font-size: 11px;
-    font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: 1.2px;
-    color: var(--green);
+  .pin-pad {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .pin-btn {
+    padding: 15px;
+    border-radius: 12px;
+    border: 2px solid var(--border);
+    background: white;
+    font-family: 'Fredoka One', cursive;
+    font-size: 24px;
+    color: var(--text);
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .pin-btn:active { transform: scale(0.9); background: var(--purple-light); }
+  .pin-btn.del { font-size: 20px; color: var(--red); }
+  .pin-btn.empty { background: transparent; border-color: transparent; pointer-events: none; }
+
+  .pin-error {
+    color: var(--red);
+    font-weight: 700;
+    font-size: 14px;
+    text-align: center;
+    min-height: 20px;
+    margin-bottom: 8px;
+  }
+
+  .pin-change-hint {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── HOME VIEW ── */
+  .home-view {
+    padding: 20px 16px;
+    gap: 14px;
+  }
+
+  .home-intro {
+    text-align: center;
     margin-bottom: 4px;
   }
-
-  .clue-text {
-    font-size: 15px;
-    font-weight: 700;
-    color: var(--text);
-    line-height: 1.45;
+  .home-intro-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 18px;
+    color: var(--purple-dark);
+    margin-bottom: 4px;
+  }
+  .home-intro-sub {
+    font-size: 13px;
+    color: var(--muted);
   }
 
-  /* distance row */
-  .info-row {
+  .game-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 20px;
+    box-shadow: var(--shadow);
+    border: 2px solid transparent;
+    cursor: pointer;
+    transition: all 0.2s;
     display: flex;
-    gap: 10px;
-    margin-bottom: 14px;
+    gap: 16px;
+    align-items: flex-start;
+    text-decoration: none;
+    color: inherit;
+  }
+  .game-card:active { transform: scale(0.98); }
+  .game-card.treasure { border-color: #b8e6c6; }
+  .game-card.treasure:active { background: var(--green-light); }
+  .game-card.orienteering { border-color: #c4b5fd; }
+  .game-card.orienteering:active { background: var(--purple-light); }
+
+  .game-card-icon {
+    font-size: 44px;
+    flex-shrink: 0;
+    line-height: 1;
   }
 
-  .info-chip {
-    flex: 1;
-    background: var(--sky);
-    border: 2px solid #c5deff;
-    border-radius: 12px;
-    padding: 10px 12px;
-    text-align: center;
+  .game-card-body { flex: 1; }
+
+  .game-card-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 20px;
+    margin-bottom: 4px;
+  }
+  .game-card.treasure .game-card-title { color: var(--green-dark); }
+  .game-card.orienteering .game-card-title { color: var(--purple-dark); }
+
+  .game-card-desc {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 12px;
   }
 
-  .info-chip.alert {
-    background: #fff5e6;
-    border-color: #ffd5a0;
+  .game-card-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+  }
+  .chip {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 50px;
+    background: var(--bg);
+  }
+  .game-card.treasure .chip { background: var(--green-light); color: var(--green-dark); }
+  .game-card.orienteering .chip { background: var(--purple-light); color: var(--purple-dark); }
+
+  .game-card-arrow {
+    font-size: 20px;
+    align-self: center;
+    flex-shrink: 0;
+    opacity: 0.4;
   }
 
-  .chip-label {
-    font-size: 10px;
+  /* Settings section on home */
+  .settings-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 16px 20px;
+    box-shadow: var(--shadow);
+    border: 2px solid var(--border);
+  }
+  .settings-card-title {
+    font-size: 12px;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--muted);
-    margin-bottom: 3px;
+    margin-bottom: 12px;
   }
-
-  .chip-value {
-    font-family: 'Fredoka One', cursive;
-    font-size: 22px;
-    color: var(--blue);
-    line-height: 1;
-  }
-
-  .chip-value.warm { color: var(--gold-dark); }
-  .chip-value.hot { color: var(--red); animation: throb 0.8s ease-in-out infinite; }
-
-  @keyframes throb {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.06); }
-  }
-
-  /* GPS button */
-  .gps-btn {
-    width: 100%;
-    padding: 14px;
-    border-radius: 14px;
-    border: none;
-    font-family: 'Fredoka One', cursive;
-    font-size: 18px;
-    letter-spacing: 0.5px;
-    cursor: pointer;
-    transition: all 0.2s;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 8px;
-    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
-    color: white;
-    box-shadow: 0 4px 14px rgba(45,154,78,0.35);
-  }
-
-  .gps-btn:active { transform: scale(0.97); }
-
-  .gps-btn.tracking {
-    background: linear-gradient(135deg, var(--blue) 0%, #1a5fd4 100%);
-    box-shadow: 0 4px 14px rgba(58,134,255,0.35);
-  }
-
-  .gps-btn.found {
-    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-    box-shadow: 0 4px 14px rgba(245,166,35,0.4);
-    animation: wiggle 0.5s ease;
-  }
-
-  @keyframes wiggle {
-    0%, 100% { transform: rotate(0); }
-    25% { transform: rotate(-3deg); }
-    75% { transform: rotate(3deg); }
-  }
-
-  /* ── OVERLAY screens ── */
-  .overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    background: rgba(0,0,0,0.55);
-    backdrop-filter: blur(6px);
-  }
-
-  .overlay.hidden { display: none; }
-
-  .overlay-card {
-    background: white;
-    border-radius: 28px;
-    padding: 32px 28px;
-    max-width: 380px;
-    width: 100%;
-    text-align: center;
-    box-shadow: var(--shadow-lg);
-    animation: pop-in 0.4s cubic-bezier(0.34,1.56,0.64,1);
-  }
-
-  @keyframes pop-in {
-    from { transform: scale(0.7); opacity: 0; }
-    to { transform: scale(1); opacity: 1; }
-  }
-
-  .overlay-emoji { font-size: 64px; margin-bottom: 12px; }
-
-  .overlay-title {
-    font-family: 'Fredoka One', cursive;
-    font-size: 28px;
-    color: var(--green-dark);
-    margin-bottom: 8px;
-  }
-
-  .overlay-sub {
-    font-size: 15px;
-    color: var(--muted);
-    line-height: 1.5;
-    margin-bottom: 24px;
-  }
-
-  .next-clue-box {
-    background: var(--green-light);
-    border: 2px solid #b8e6c6;
-    border-radius: 14px;
-    padding: 14px 16px;
-    margin-bottom: 20px;
-    text-align: left;
-  }
-
-  .next-clue-box .clue-label { margin-bottom: 6px; }
-
-  .overlay-btn {
-    width: 100%;
-    padding: 15px;
-    border-radius: 14px;
-    border: none;
-    font-family: 'Fredoka One', cursive;
-    font-size: 19px;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
-    color: white;
-    box-shadow: 0 4px 14px rgba(45,154,78,0.35);
-  }
-
-  .overlay-btn:active { transform: scale(0.97); }
-
-  .overlay-btn.gold {
-    background: linear-gradient(135deg, var(--gold) 0%, var(--gold-dark) 100%);
-    box-shadow: 0 4px 14px rgba(245,166,35,0.4);
-  }
-
-  /* Win screen */
-  .win-stars {
-    font-size: 40px;
-    margin-bottom: 8px;
-    animation: spin-stars 2s linear infinite;
-  }
-
-  @keyframes spin-stars {
-    0% { transform: rotate(0deg) scale(1); }
-    50% { transform: rotate(180deg) scale(1.15); }
-    100% { transform: rotate(360deg) scale(1); }
-  }
-
-  .prize-box {
-    background: linear-gradient(135deg, #fffbe6, #fff3c4);
-    border: 2px solid var(--gold);
-    border-radius: 14px;
-    padding: 14px 16px;
-    margin-bottom: 20px;
-    font-size: 16px;
-    font-weight: 700;
-    color: var(--gold-dark);
-  }
-
-  /* Start screen */
-  .start-screen .overlay-card { padding-top: 36px; }
-
-  .start-list {
-    text-align: left;
-    margin: 0 0 20px;
-    padding: 0;
-    list-style: none;
-  }
-
-  .start-list li {
-    padding: 7px 0;
-    font-size: 14px;
-    font-weight: 600;
-    color: var(--muted);
-    border-bottom: 1px solid #eef5f0;
-    display: flex;
-    gap: 8px;
-  }
-
-  /* ── Leaflet overrides ── */
-  .leaflet-control-zoom { border-radius: 12px !important; overflow: hidden; }
-  .leaflet-control-zoom a { font-size: 18px !important; }
-
-  .my-location-marker {
-    background: var(--blue);
-    border: 3px solid white;
-    border-radius: 50%;
-    box-shadow: 0 0 0 5px rgba(58,134,255,0.3);
-    animation: gps-pulse 2s ease-out infinite;
-  }
-
-  @keyframes gps-pulse {
-    0% { box-shadow: 0 0 0 5px rgba(58,134,255,0.3); }
-    100% { box-shadow: 0 0 0 18px rgba(58,134,255,0); }
-  }
-
-  .target-marker-inner {
-    background: var(--red);
-    border: 3px solid white;
-    border-radius: 50%;
-    width: 100%;
-    height: 100%;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-    animation: target-pulse 1.2s ease-in-out infinite;
-  }
-
-  @keyframes target-pulse {
-    0%, 100% { transform: scale(1); }
-    50% { transform: scale(1.15); }
-  }
-
-  /* error toast */
-  .toast {
-    position: fixed;
-    bottom: 20px;
-    left: 50%;
-    transform: translateX(-50%) translateY(80px);
-    background: #333;
-    color: white;
-    padding: 10px 20px;
-    border-radius: 50px;
-    font-size: 13px;
-    font-weight: 700;
-    z-index: 9999;
-    transition: transform 0.3s;
-    white-space: nowrap;
-  }
-  .toast.show { transform: translateX(-50%) translateY(0); }
-
-  /* ── TAP-IN STYLES ── */
-  .tapin-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin: 14px 0 10px;
-    width: 100%;
-  }
-
-  .tapin-btn {
-    padding: 18px 10px 14px;
-    border-radius: 16px;
-    border: 3px solid;
-    background: white;
-    font-family: 'Fredoka One', cursive;
-    cursor: pointer;
-    transition: all 0.35s cubic-bezier(0.34,1.56,0.64,1);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-    min-height: 76px;
-    justify-content: center;
-    -webkit-tap-highlight-color: transparent;
-  }
-  .tapin-btn:active { transform: scale(0.92); }
-
-  .tapin-btn.tapped {
-    color: white !important;
-    border-color: transparent !important;
-    transform: scale(1.05);
-  }
-
-  .tapin-check {
-    font-size: 22px;
-    line-height: 1;
-    transition: opacity 0.2s, transform 0.35s cubic-bezier(0.34,1.56,0.64,1);
-  }
-  .tapin-btn:not(.tapped) .tapin-check { opacity: 0.2; }
-  .tapin-btn.tapped .tapin-check { opacity: 1; transform: scale(1.3); }
-
-  .tapin-name {
-    font-size: 15px;
-    line-height: 1;
-  }
-
-  .tapin-progress {
-    font-family: 'Fredoka One', cursive;
-    font-size: 16px;
-    color: var(--muted);
-    text-align: center;
-    margin-bottom: 16px;
-    min-height: 24px;
-    transition: color 0.3s;
-  }
-  .tapin-progress.complete { color: var(--green); }
-
-  .tapin-cancel {
-    background: none;
-    border: none;
-    font-size: 13px;
-    font-weight: 700;
-    color: var(--muted);
-    cursor: pointer;
-    padding: 4px;
-    display: block;
-    margin: 0 auto;
-    text-decoration: underline;
-    text-underline-offset: 2px;
-  }
-
-  /* Team member rows in admin */
-  .team-member-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    margin-bottom: 8px;
-  }
-  .team-color-dot {
-    width: 26px;
-    height: 26px;
-    border-radius: 50%;
-    flex-shrink: 0;
-  }
-
-  /* ── ADMIN STYLES ── */
-  .admin-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 1100;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    overflow: hidden;
-  }
-  .admin-overlay.hidden { display: none; }
-
-  .admin-topbar {
-    background: linear-gradient(135deg, var(--green-dark) 0%, var(--green) 100%);
-    color: white;
-    padding: 14px 16px;
+  .settings-row {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    flex-shrink: 0;
-    box-shadow: 0 2px 12px rgba(30,110,54,0.25);
+    gap: 10px;
   }
-
-  .admin-topbar-title {
-    font-family: 'Fredoka One', cursive;
-    font-size: 20px;
-    letter-spacing: 0.4px;
-  }
-
-  .admin-close-btn {
-    background: rgba(255,255,255,0.2);
-    border: 2px solid rgba(255,255,255,0.35);
-    border-radius: 50%;
-    width: 36px;
-    height: 36px;
-    color: white;
-    font-size: 18px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .settings-label {
+    font-size: 14px;
     font-weight: 700;
+    color: var(--text);
+  }
+  .settings-sub {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .btn-change-pin {
+    padding: 8px 16px;
+    border-radius: 10px;
+    border: 2px solid var(--border);
+    background: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--purple);
+    cursor: pointer;
+    white-space: nowrap;
     transition: background 0.2s;
   }
-  .admin-close-btn:active { background: rgba(255,255,255,0.35); }
+  .btn-change-pin:active { background: var(--purple-light); }
 
-  .admin-body {
+  /* ── CONFIG VIEW ── */
+  .config-view {
+    flex-direction: column;
+  }
+
+  .config-body {
     flex: 1;
     overflow-y: auto;
     padding: 16px;
@@ -615,26 +317,28 @@
     gap: 14px;
   }
 
-  .admin-footer {
+  .config-footer {
     background: white;
+    border-top: 2px solid var(--border);
     padding: 12px 16px;
-    border-top: 2px solid #e0ede4;
     flex-shrink: 0;
     display: flex;
+    flex-direction: column;
     gap: 10px;
   }
 
-  .admin-section {
+  /* Form elements */
+  .section {
     background: white;
-    border-radius: 16px;
+    border-radius: var(--radius);
     padding: 16px;
     box-shadow: var(--shadow);
   }
 
-  .admin-section-title {
+  .section-title {
     font-family: 'Fredoka One', cursive;
-    font-size: 17px;
-    color: var(--green-dark);
+    font-size: 16px;
+    color: var(--purple-dark);
     margin-bottom: 14px;
     display: flex;
     align-items: center;
@@ -657,7 +361,7 @@
   .form-input {
     width: 100%;
     padding: 10px 12px;
-    border: 2px solid #d0e8d6;
+    border: 2px solid var(--border);
     border-radius: 10px;
     font-family: 'Nunito', sans-serif;
     font-size: 14px;
@@ -667,24 +371,17 @@
     transition: border-color 0.2s;
     resize: vertical;
   }
-  .form-input:focus {
-    outline: none;
-    border-color: var(--green);
-  }
+  .form-input:focus { outline: none; border-color: var(--purple); }
 
-  .form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
+  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-  /* Checkpoint card */
+  /* Checkpoint cards */
   .cp-card {
-    border: 2px solid #d0e8d6;
+    border: 2px solid var(--border);
     border-radius: 14px;
     padding: 14px;
-    margin-bottom: 12px;
-    background: var(--green-light);
+    margin-bottom: 10px;
+    background: var(--bg);
   }
   .cp-card:last-child { margin-bottom: 0; }
 
@@ -692,305 +389,275 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 12px;
+    margin-bottom: 10px;
   }
 
-  .cp-number {
+  .cp-label {
     font-family: 'Fredoka One', cursive;
-    font-size: 15px;
-    color: var(--green-dark);
+    font-size: 14px;
+    color: var(--purple-dark);
   }
 
   .btn-remove {
     background: #fff0f0;
     border: 2px solid #fcc;
     border-radius: 8px;
-    padding: 4px 10px;
+    padding: 3px 10px;
     font-size: 12px;
     font-weight: 800;
     color: var(--red);
     cursor: pointer;
-    transition: background 0.2s;
   }
   .btn-remove:active { background: #ffe0e0; }
 
   .btn-use-gps {
     width: 100%;
-    padding: 8px 12px;
-    border-radius: 10px;
-    border: 2px solid #b8e6c6;
+    padding: 7px 12px;
+    border-radius: 9px;
+    border: 2px solid var(--border);
     background: white;
     font-family: 'Nunito', sans-serif;
-    font-size: 13px;
+    font-size: 12px;
     font-weight: 700;
-    color: var(--green);
+    color: var(--purple);
     cursor: pointer;
-    transition: all 0.2s;
     margin-bottom: 10px;
+    transition: background 0.2s;
   }
-  .btn-use-gps:active { background: var(--green-light); }
+  .btn-use-gps:active { background: var(--purple-light); }
+
+  .reveals-input {
+    width: 100%;
+    padding: 10px 12px;
+    border: 2px solid var(--border);
+    border-radius: 10px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 22px;
+    color: var(--purple);
+    text-align: center;
+    background: white;
+    transition: border-color 0.2s;
+  }
+  .reveals-input:focus { outline: none; border-color: var(--purple); }
 
   .btn-add-cp {
     width: 100%;
-    padding: 12px;
+    padding: 11px;
     border-radius: 12px;
-    border: 2px dashed #b8e6c6;
+    border: 2px dashed #c4b5fd;
     background: white;
     font-family: 'Fredoka One', cursive;
-    font-size: 15px;
-    color: var(--green);
+    font-size: 14px;
+    color: var(--purple);
     cursor: pointer;
-    transition: all 0.2s;
     margin-top: 4px;
+    transition: all 0.2s;
   }
-  .btn-add-cp:active { background: var(--green-light); border-style: solid; }
+  .btn-add-cp:active { background: var(--purple-light); border-style: solid; }
 
-  .btn-save {
-    flex: 1;
-    padding: 14px;
+  /* Generate button */
+  .btn-generate {
+    width: 100%;
+    padding: 15px;
     border-radius: 14px;
     border: none;
     font-family: 'Fredoka One', cursive;
-    font-size: 18px;
+    font-size: 19px;
     cursor: pointer;
-    transition: all 0.2s;
-    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
     color: white;
-    box-shadow: 0 4px 14px rgba(45,154,78,0.35);
-  }
-  .btn-save:active { transform: scale(0.97); }
-
-  .btn-reset {
-    padding: 14px 18px;
-    border-radius: 14px;
-    border: 2px solid #d0e8d6;
-    background: white;
-    font-family: 'Fredoka One', cursive;
-    font-size: 15px;
-    color: var(--muted);
-    cursor: pointer;
+    box-shadow: 0 4px 16px rgba(124,58,237,0.35);
     transition: all 0.2s;
-    white-space: nowrap;
   }
-  .btn-reset:active { background: #f5f5f5; }
-
-  /* PIN screen */
-  .pin-display {
-    font-family: 'Fredoka One', cursive;
-    font-size: 36px;
-    letter-spacing: 14px;
-    color: var(--green-dark);
-    margin: 12px 0 20px;
-    text-align: center;
+  .btn-generate:active { transform: scale(0.97); }
+  .btn-generate.treasure {
+    background: linear-gradient(135deg, var(--green) 0%, var(--green-dark) 100%);
+    box-shadow: 0 4px 16px rgba(45,154,78,0.35);
   }
 
-  .pin-pad {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-    margin-bottom: 12px;
+  /* Generated link box */
+  .link-box {
+    display: none;
+    background: var(--purple-light);
+    border: 2px solid #c4b5fd;
+    border-radius: 14px;
+    padding: 14px;
   }
+  .link-box.treasure {
+    background: var(--green-light);
+    border-color: #b8e6c6;
+  }
+  .link-box.show { display: block; }
 
-  .pin-btn {
-    padding: 16px;
-    border-radius: 12px;
-    border: 2px solid #d0e8d6;
-    background: white;
-    font-family: 'Fredoka One', cursive;
-    font-size: 24px;
+  .link-box-label {
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--purple);
+    margin-bottom: 8px;
+  }
+  .link-box.treasure .link-box-label { color: var(--green-dark); }
+
+  .link-url {
+    font-size: 12px;
+    font-weight: 600;
     color: var(--text);
-    cursor: pointer;
-    transition: all 0.15s;
-  }
-  .pin-btn:active { transform: scale(0.9); background: var(--green-light); }
-  .pin-btn.del { font-size: 20px; color: var(--red); }
-  .pin-btn.empty { background: transparent; border-color: transparent; pointer-events: none; }
-
-  .pin-error {
-    color: var(--red);
-    font-weight: 700;
-    font-size: 14px;
-    text-align: center;
-    margin-top: 4px;
-    min-height: 20px;
+    word-break: break-all;
+    background: white;
+    border-radius: 8px;
+    padding: 8px 10px;
+    margin-bottom: 10px;
+    opacity: 0.8;
   }
 
-  .pin-cancel {
-    width: 100%;
-    padding: 10px;
-    border-radius: 12px;
-    border: 2px solid #d0e8d6;
+  .link-actions {
+    display: flex;
+    gap: 8px;
+  }
+
+  .link-btn {
+    flex: 1;
+    padding: 9px;
+    border-radius: 10px;
+    border: 2px solid #c4b5fd;
     background: white;
     font-family: 'Nunito', sans-serif;
-    font-size: 15px;
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--purple);
+    cursor: pointer;
+    text-align: center;
+    transition: background 0.2s;
+    text-decoration: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+  }
+  .link-btn:active { background: var(--purple-light); }
+  .link-btn.treasure { border-color: #b8e6c6; color: var(--green-dark); }
+  .link-btn.treasure:active { background: var(--green-light); }
+
+  /* Change PIN modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    z-index: 999;
+    background: rgba(0,0,0,0.5);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+  }
+  .modal-backdrop.hidden { display: none; }
+
+  .modal-card {
+    background: white;
+    border-radius: 24px;
+    padding: 28px 24px;
+    max-width: 340px;
+    width: 100%;
+    box-shadow: var(--shadow-lg);
+    animation: pop-in 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  }
+  @keyframes pop-in {
+    from { transform: scale(0.75); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .modal-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: 20px;
+    color: var(--purple-dark);
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  .modal-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 16px;
+  }
+
+  .btn-modal-cancel {
+    flex: 1;
+    padding: 11px;
+    border-radius: 11px;
+    border: 2px solid var(--border);
+    background: white;
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
     font-weight: 700;
     color: var(--muted);
     cursor: pointer;
-    margin-top: 8px;
   }
+  .btn-modal-save {
+    flex: 1;
+    padding: 11px;
+    border-radius: 11px;
+    border: none;
+    background: linear-gradient(135deg, var(--purple) 0%, var(--purple-dark) 100%);
+    font-family: 'Nunito', sans-serif;
+    font-size: 14px;
+    font-weight: 800;
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(124,58,237,0.3);
+  }
+  .btn-modal-save:active { transform: scale(0.97); }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: #1e1b4b;
+    color: white;
+    padding: 10px 20px;
+    border-radius: 50px;
+    font-size: 13px;
+    font-weight: 700;
+    z-index: 9999;
+    transition: transform 0.3s;
+    white-space: nowrap;
+    pointer-events: none;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .btn-loc-row { display:flex; gap:8px; margin-bottom:10px; }
+  .btn-loc-row .btn-use-gps { flex:1; margin:0; }
+  .btn-pick-map { flex:1; padding:10px; background:#e8f7ed; color:#1e6e36; border:2px solid #2d9a4e; border-radius:10px; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-pick-map:active { background:#d1f0dc; }
+  #mapPickerModal { display:none; position:fixed; inset:0; z-index:9999; flex-direction:column; background:rgba(0,0,0,0.75); }
+  #mapPickerModal.open { display:flex; }
+  .map-picker-bar { background:#fff; padding:12px 16px; display:flex; align-items:center; gap:10px; flex-shrink:0; flex-wrap:wrap; }
+  .map-picker-coords { flex:1; font-family:monospace; font-size:13px; color:#333; font-weight:600; text-align:center; }
+  .btn-map-confirm { background:#2d9a4e; color:#fff; border:none; border-radius:10px; padding:10px 18px; font-size:14px; font-weight:700; cursor:pointer; }
+  .btn-map-cancel { background:#e5e7eb; color:#333; border:none; border-radius:10px; padding:10px 14px; font-size:14px; font-weight:700; cursor:pointer; }
+  #mapPickerContainer { flex:1; min-height:0; }
 </style>
 </head>
 <body>
 
-<!-- ══════════════════════════════════════════════
-     CONFIG — Edit checkpoints here, or use admin screen (⚙️)
-══════════════════════════════════════════════ -->
-<script>
-const DEFAULT_GAME_CONFIG = {
-  title: "Treasure Hunt 🗺️",
-  unlockRadius: 20,
-  checkpoints: [
-    {
-      lat: 53.3734,
-      lng: -6.2052,
-      clue: "Your adventure begins! Find the big old tree near the park entrance.",
-      hint: "Checkpoint 1"
-    },
-    {
-      lat: 53.3740,
-      lng: -6.2045,
-      clue: "Well done! Now head to the place where people sit and eat lunch outside.",
-      hint: "Checkpoint 2"
-    },
-    {
-      lat: 53.3745,
-      lng: -6.2038,
-      clue: "Brilliant! Next, find the noticeboard near the car park.",
-      hint: "Checkpoint 3"
-    },
-    {
-      lat: 53.3750,
-      lng: -6.2030,
-      clue: "Halfway there! Head towards the water fountain by the path.",
-      hint: "Checkpoint 4"
-    },
-    {
-      lat: 53.3755,
-      lng: -6.2022,
-      clue: "Almost there! Make your way to the red gate at the far end of the field.",
-      hint: "Checkpoint 5 — FINAL!"
-    }
-  ],
-  winMessage: "You found it! 🎉",
-  prizeText: "🍦 Claim your ice cream at the finish line!",
-  team: []
-};
-
-// Load config from URL hash if present (set by admin "Save & Copy Link")
-const GAME_CONFIG = (function() {
-  try {
-    const hash = window.location.hash.slice(1);
-    if (hash) {
-      const decoded = JSON.parse(decodeURIComponent(escape(atob(hash))));
-      return Object.assign({}, DEFAULT_GAME_CONFIG, decoded);
-    }
-  } catch(e) {}
-  return Object.assign({}, DEFAULT_GAME_CONFIG);
-})();
-</script>
-
-<!-- HTML Structure -->
-<header>
-  <div class="header-left">
-    <span class="header-icon">🗺️</span>
-    <span class="header-title" id="gameTitle">Treasure Hunt</span>
-  </div>
-  <div class="header-right">
-    <button class="settings-btn" onclick="openAdminPin()" title="Admin Settings">⚙️</button>
-    <span class="checkpoint-badge" id="headerBadge">1 / 5</span>
-  </div>
-</header>
-
-<div class="progress-bar" id="progressBar"></div>
-
-<div id="map"></div>
-
-<div class="bottom-panel">
-  <div class="panel-drag"></div>
-
-  <div class="clue-card">
-    <span class="clue-icon" id="clueIcon">🔍</span>
-    <div>
-      <div class="clue-label">Your Clue</div>
-      <div class="clue-text" id="clueText">Loading…</div>
-    </div>
-  </div>
-
-  <div class="info-row">
-    <div class="info-chip">
-      <div class="chip-label">Distance</div>
-      <div class="chip-value" id="distanceVal">—</div>
-    </div>
-    <div class="info-chip alert">
-      <div class="chip-label">Checkpoint</div>
-      <div class="chip-value warm" id="checkpointVal">1 of 5</div>
-    </div>
-  </div>
-
-  <button class="gps-btn" id="gpsBtn" onclick="startTracking()">
-    <span>📍</span> Start GPS Tracking
-  </button>
+<!-- App header -->
+<div class="app-header">
+  <button class="app-header-back hidden" id="headerBack" onclick="goHome()">←</button>
+  <span class="app-header-title" id="headerTitle">🎮 Game Admin</span>
+  <span class="app-header-badge" id="headerBadge" style="display:none"></span>
 </div>
 
-<!-- ── Start Overlay ── -->
-<div class="overlay start-screen" id="startOverlay">
-  <div class="overlay-card">
-    <div class="overlay-emoji">🗺️</div>
-    <div class="overlay-title" id="startTitle">Treasure Hunt</div>
-    <div class="overlay-sub">Navigate to each checkpoint using the map. Get close enough to unlock the next clue!</div>
-    <ul class="start-list">
-      <li><span>📍</span> Your location shows as a blue dot</li>
-      <li><span>🔴</span> The target shows as a red dot</li>
-      <li><span>📏</span> Distance updates live as you walk</li>
-      <li><span>🏆</span> <span id="startCheckpointCount">5 checkpoints</span> to find the prize!</li>
-    </ul>
-    <button class="overlay-btn" onclick="dismissStart()">🚀 Let's Go!</button>
-  </div>
-</div>
-
-<!-- ── Checkpoint Found Overlay ── -->
-<div class="overlay hidden" id="foundOverlay">
-  <div class="overlay-card">
-    <div class="overlay-emoji" id="foundEmoji">🎯</div>
-    <div class="overlay-title" id="foundTitle">Checkpoint Found!</div>
-    <div class="overlay-sub" id="foundSub">Great work! Here's your next clue:</div>
-    <div class="next-clue-box" id="nextClueBox">
-      <div class="clue-label">Next Clue</div>
-      <div class="clue-text" id="nextClueText"></div>
-    </div>
-    <button class="overlay-btn" id="nextBtn" onclick="nextCheckpoint()">➡️ Head to Next Checkpoint</button>
-  </div>
-</div>
-
-<!-- ── Win Overlay ── -->
-<div class="overlay hidden" id="winOverlay">
-  <div class="overlay-card">
-    <div class="win-stars">⭐</div>
-    <div class="overlay-title">You Won! 🏆</div>
-    <div class="overlay-sub" id="winMessage">Amazing — you found all the checkpoints!</div>
-    <div class="prize-box" id="prizeBox"></div>
-    <button class="overlay-btn gold" onclick="restartGame()">🔄 Play Again</button>
-  </div>
-</div>
-
-<!-- ── Tap-In Overlay ── -->
-<div class="overlay hidden" id="tapInOverlay">
-  <div class="overlay-card">
-    <div class="overlay-emoji" id="tapInEmoji">📍</div>
-    <div class="overlay-title" id="tapInTitle">You're here!</div>
-    <div class="overlay-sub">Everyone tap your button to unlock this checkpoint!</div>
-    <div class="tapin-grid" id="tapInGrid"></div>
-    <div class="tapin-progress" id="tapInProgress"></div>
-    <button class="tapin-cancel" onclick="cancelTapIn()">Not here yet — cancel</button>
-  </div>
-</div>
-
-<!-- ── Admin PIN Overlay ── -->
-<div class="overlay hidden" id="adminPinOverlay">
-  <div class="overlay-card">
-    <div class="overlay-emoji">🔐</div>
-    <div class="overlay-title">Admin Access</div>
-    <div class="overlay-sub" style="margin-bottom:0">Enter your 4-digit PIN</div>
+<!-- ── PIN VIEW ── -->
+<div class="view pin-view active" id="pinView">
+  <div class="pin-card">
+    <div class="pin-emoji">🔐</div>
+    <div class="pin-title">Admin Access</div>
+    <div class="pin-sub">Enter your 4-digit PIN to continue</div>
     <div class="pin-display" id="pinDisplay">○ ○ ○ ○</div>
     <div class="pin-pad">
       <button class="pin-btn" onclick="pinPress('1')">1</button>
@@ -1007,515 +674,518 @@ const GAME_CONFIG = (function() {
       <button class="pin-btn del" onclick="pinDelete()">⌫</button>
     </div>
     <div class="pin-error" id="pinError"></div>
-    <button class="pin-cancel" onclick="closeAdminPin()">Cancel</button>
+    <div class="pin-change-hint">Default PIN: 1234</div>
   </div>
 </div>
 
-<!-- ── Admin Config Overlay ── -->
-<div class="admin-overlay hidden" id="adminOverlay">
-  <div class="admin-topbar">
-    <span class="admin-topbar-title">⚙️ Game Configuration</span>
-    <button class="admin-close-btn" onclick="closeAdmin()">✕</button>
+<!-- ── HOME VIEW ── -->
+<div class="view home-view" id="homeView">
+
+  <div class="home-intro">
+    <div class="home-intro-title">Choose a game to configure</div>
+    <div class="home-intro-sub">Set up your checkpoints, then share the player link</div>
   </div>
 
-  <div class="admin-body" id="adminBody">
+  <!-- Treasure Hunt card -->
+  <div class="game-card treasure" onclick="openConfig('treasure')">
+    <div class="game-card-icon">🗺️</div>
+    <div class="game-card-body">
+      <div class="game-card-title">Treasure Hunt</div>
+      <div class="game-card-desc">Players follow sequential clues, visiting checkpoints one at a time in order.</div>
+      <div class="game-card-chips">
+        <span class="chip">Sequential</span>
+        <span class="chip">Clue reveal</span>
+        <span class="chip">Prize at end</span>
+      </div>
+    </div>
+    <div class="game-card-arrow">›</div>
+  </div>
 
-    <!-- Game Settings -->
-    <div class="admin-section">
-      <div class="admin-section-title">🎮 Game Settings</div>
+  <!-- Orienteering card -->
+  <div class="game-card orienteering" onclick="openConfig('orienteering')">
+    <div class="game-card-icon">🧭</div>
+    <div class="game-card-body">
+      <div class="game-card-title">Orienteering</div>
+      <div class="game-card-desc">All controls shown on the map at once. Players collect letters in any order to reveal an answer.</div>
+      <div class="game-card-chips">
+        <span class="chip">Any order</span>
+        <span class="chip">Letter collect</span>
+        <span class="chip">Code reveal</span>
+      </div>
+    </div>
+    <div class="game-card-arrow">›</div>
+  </div>
+
+  <!-- Settings -->
+  <div class="settings-card">
+    <div class="settings-card-title">⚙️ Settings</div>
+    <div class="settings-row">
+      <div>
+        <div class="settings-label">Admin PIN</div>
+        <div class="settings-sub">Used to access this admin panel</div>
+      </div>
+      <button class="btn-change-pin" onclick="openChangePinModal()">Change PIN</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- ── CONFIG VIEW ── -->
+<div class="view config-view" id="configView">
+  <div class="config-body" id="configBody"></div>
+  <div class="config-footer">
+    <div class="link-box" id="linkBox">
+      <div class="link-box-label">🔗 Player Link</div>
+      <div class="link-url" id="linkUrl"></div>
+      <div class="link-actions">
+        <button class="link-btn" id="linkCopyBtn" onclick="copyLink()">📋 Copy</button>
+        <button class="link-btn" id="linkShareBtn" onclick="shareLink()" style="display:none">📤 Share</button>
+        <a class="link-btn" id="linkOpenBtn" href="#" target="_blank" rel="noopener">↗ Test</a>
+      </div>
+    </div>
+    <button class="btn-generate" id="generateBtn" onclick="generateLink()">🔗 Generate Player Link</button>
+  </div>
+</div>
+
+<!-- Change PIN modal -->
+<div class="modal-backdrop hidden" id="changePinModal">
+  <div class="modal-card">
+    <div class="modal-title">🔐 Change PIN</div>
+    <div class="form-group">
+      <label class="form-label">Current PIN</label>
+      <input class="form-input" type="password" id="currentPinInput" maxlength="4" pattern="\d{4}" placeholder="Current 4-digit PIN">
+    </div>
+    <div class="form-group">
+      <label class="form-label">New PIN</label>
+      <input class="form-input" type="password" id="newPinInput" maxlength="4" pattern="\d{4}" placeholder="New 4-digit PIN">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Confirm New PIN</label>
+      <input class="form-input" type="password" id="confirmPinInput" maxlength="4" pattern="\d{4}" placeholder="Repeat new PIN">
+    </div>
+    <div class="modal-actions">
+      <button class="btn-modal-cancel" onclick="closeChangePinModal()">Cancel</button>
+      <button class="btn-modal-save" onclick="savePin()">Save PIN</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ══════════════════════════════════════
+//  DEFAULT CONFIGS
+// ══════════════════════════════════════
+const DEFAULTS = {
+  treasure: {
+    title: "Treasure Hunt 🗺️",
+    unlockRadius: 20,
+    checkpoints: [
+      { lat: 53.3734, lng: -6.2052, clue: "Your adventure begins! Find the big old tree near the park entrance.", hint: "Checkpoint 1" },
+      { lat: 53.3740, lng: -6.2045, clue: "Well done! Now head to the place where people sit and eat lunch outside.", hint: "Checkpoint 2" },
+      { lat: 53.3745, lng: -6.2038, clue: "Brilliant! Next, find the noticeboard near the car park.", hint: "Checkpoint 3" },
+      { lat: 53.3750, lng: -6.2030, clue: "Halfway there! Head towards the water fountain by the path.", hint: "Checkpoint 4" },
+      { lat: 53.3755, lng: -6.2022, clue: "Almost there! Make your way to the red gate at the far end of the field.", hint: "Checkpoint 5 — FINAL!" }
+    ],
+    winMessage: "You found it! 🎉",
+    prizeText: "🍦 Claim your ice cream at the finish line!",
+    team: []
+  },
+  orienteering: {
+    title: "Orienteering 🧭",
+    unlockRadius: 20,
+    checkpoints: [
+      { lat: 53.3734, lng: -6.2052, label: "Control 1", hint: "Near the park entrance", reveals: "A" },
+      { lat: 53.3740, lng: -6.2045, label: "Control 2", hint: "By the picnic benches",  reveals: "P" },
+      { lat: 53.3745, lng: -6.2038, label: "Control 3", hint: "At the noticeboard",     reveals: "P" },
+      { lat: 53.3750, lng: -6.2030, label: "Control 4", hint: "Near the water fountain", reveals: "L" },
+      { lat: 53.3755, lng: -6.2022, label: "Control 5", hint: "At the red gate",        reveals: "E" }
+    ],
+    winMessage: "You found all the controls!",
+    answer: "🍎 The answer is: APPLE",
+    team: []
+  }
+};
+
+const TAPIN_COLORS = ['#f97316','#3a86ff','#2d9a4e','#7c3aed','#e84040','#f5a623','#06b6d4','#ec4899'];
+
+const STORAGE_KEYS = {
+  treasure: 'th_admin_treasure_config',
+  orienteering: 'th_admin_orient_config',
+  pin: 'th_admin_pin'
+};
+
+// ══════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════
+let currentMode = null;
+let editingConfig = null;
+let generatedUrl = null;
+
+// ══════════════════════════════════════
+//  PIN
+// ══════════════════════════════════════
+let pinInput = '';
+
+function getPin() { return localStorage.getItem(STORAGE_KEYS.pin) || '1234'; }
+
+function pinPress(d) {
+  if (pinInput.length >= 4) return;
+  pinInput += d;
+  updatePinDisplay();
+  if (pinInput.length === 4) setTimeout(checkPin, 120);
+}
+function pinDelete() { pinInput = pinInput.slice(0, -1); updatePinDisplay(); }
+function updatePinDisplay() {
+  document.getElementById('pinDisplay').textContent =
+    Array.from({length: 4}, (_, i) => i < pinInput.length ? '●' : '○').join(' ');
+}
+function checkPin() {
+  if (pinInput === getPin()) {
+    showView('home');
+  } else {
+    document.getElementById('pinError').textContent = 'Incorrect PIN — try again';
+    pinInput = ''; updatePinDisplay();
+  }
+}
+
+// ══════════════════════════════════════
+//  CHANGE PIN MODAL
+// ══════════════════════════════════════
+function openChangePinModal() {
+  document.getElementById('currentPinInput').value = '';
+  document.getElementById('newPinInput').value = '';
+  document.getElementById('confirmPinInput').value = '';
+  document.getElementById('changePinModal').classList.remove('hidden');
+}
+function closeChangePinModal() {
+  document.getElementById('changePinModal').classList.add('hidden');
+}
+function savePin() {
+  const current = document.getElementById('currentPinInput').value.trim();
+  const next = document.getElementById('newPinInput').value.trim();
+  const confirm = document.getElementById('confirmPinInput').value.trim();
+  if (current !== getPin()) { showToast("Current PIN is incorrect"); return; }
+  if (!/^\d{4}$/.test(next)) { showToast("New PIN must be exactly 4 digits"); return; }
+  if (next !== confirm) { showToast("PINs don't match"); return; }
+  localStorage.setItem(STORAGE_KEYS.pin, next);
+  closeChangePinModal();
+  showToast("PIN updated!");
+}
+
+// ══════════════════════════════════════
+//  VIEW ROUTING
+// ══════════════════════════════════════
+function showView(name) {
+  document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+  document.getElementById(name + 'View').classList.add('active');
+
+  const back = document.getElementById('headerBack');
+  const badge = document.getElementById('headerBadge');
+  const title = document.getElementById('headerTitle');
+
+  if (name === 'pin') {
+    title.textContent = '🎮 Game Admin';
+    back.classList.add('hidden');
+    badge.style.display = 'none';
+  } else if (name === 'home') {
+    title.textContent = '🎮 Game Admin';
+    back.classList.add('hidden');
+    badge.style.display = 'none';
+    pinInput = '';
+    updatePinDisplay();
+    document.getElementById('pinError').textContent = '';
+  } else if (name === 'config') {
+    const labels = { treasure: '🗺️ Treasure Hunt', orienteering: '🧭 Orienteering' };
+    title.textContent = labels[currentMode];
+    back.classList.remove('hidden');
+    const n = editingConfig.checkpoints.length;
+    badge.textContent = `${n} ${currentMode === 'treasure' ? 'checkpoint' : 'control'}${n !== 1 ? 's' : ''}`;
+    badge.style.display = '';
+  }
+}
+
+function goHome() {
+  showView('home');
+}
+
+// ══════════════════════════════════════
+//  CONFIG
+// ══════════════════════════════════════
+function loadSavedConfig(mode) {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEYS[mode]);
+    if (stored) return JSON.parse(stored);
+  } catch(e) {}
+  return null;
+}
+
+function openConfig(mode) {
+  currentMode = mode;
+  editingConfig = JSON.parse(JSON.stringify(loadSavedConfig(mode) || DEFAULTS[mode]));
+  generatedUrl = null;
+  renderConfigView();
+  showView('config');
+}
+
+function renderConfigView() {
+  document.getElementById('linkBox').className = 'link-box';
+  document.getElementById('generateBtn').className = `btn-generate ${currentMode}`;
+
+  if (currentMode === 'treasure') renderTreasureConfig();
+  else renderOrienteeringConfig();
+}
+
+function renderTreasureConfig() {
+  const body = document.getElementById('configBody');
+  body.innerHTML = `
+    <div class="section">
+      <div class="section-title">🎮 Game Settings</div>
       <div class="form-group">
         <label class="form-label">Game Title</label>
-        <input class="form-input" type="text" id="adminTitle" placeholder="Treasure Hunt 🗺️">
+        <input class="form-input" type="text" id="cfgTitle" value="${esc(editingConfig.title)}" placeholder="Treasure Hunt 🗺️">
       </div>
       <div class="form-row">
         <div class="form-group">
           <label class="form-label">Unlock Radius (metres)</label>
-          <input class="form-input" type="number" id="adminRadius" min="5" max="500" placeholder="20">
+          <input class="form-input" type="number" id="cfgRadius" min="5" max="500" value="${editingConfig.unlockRadius}">
         </div>
         <div class="form-group">
-          <label class="form-label">New PIN (4 digits)</label>
-          <input class="form-input" type="password" id="adminNewPin" maxlength="4" pattern="\d{4}" placeholder="Leave blank to keep">
+          <label class="form-label">Win Message</label>
+          <input class="form-input" type="text" id="cfgWinMsg" value="${esc(editingConfig.winMessage)}">
         </div>
-      </div>
-    </div>
-
-    <!-- Win Screen -->
-    <div class="admin-section">
-      <div class="admin-section-title">🏆 Win Screen</div>
-      <div class="form-group">
-        <label class="form-label">Win Message</label>
-        <input class="form-input" type="text" id="adminWinMsg" placeholder="You found it! 🎉">
       </div>
       <div class="form-group">
         <label class="form-label">Prize Text</label>
-        <input class="form-input" type="text" id="adminPrize" placeholder="🍦 Claim your prize!">
+        <input class="form-input" type="text" id="cfgPrize" value="${esc(editingConfig.prizeText)}">
       </div>
     </div>
 
-    <!-- Team Members -->
-    <div class="admin-section">
-      <div class="admin-section-title">👥 Team Members</div>
+    <div class="section">
+      <div class="section-title">👥 Team Members</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.4">Each member gets their own tap button at every checkpoint. Leave empty for solo play.</p>
       <div id="teamContainer"></div>
-      <button class="btn-add-cp" style="border-color:#b8e6c6;color:var(--green)" onclick="addTeamMember()">＋ Add Team Member</button>
+      <button class="btn-add-cp" style="border-color:#b8e6c6;color:#1e6e36" onclick="addTeamMember()">＋ Add Team Member</button>
     </div>
 
-    <!-- Checkpoints -->
-    <div class="admin-section">
-      <div class="admin-section-title">📍 Checkpoints</div>
-      <div id="checkpointsContainer"></div>
+    <div class="section">
+      <div class="section-title">📍 Checkpoints</div>
+      <div id="cpContainer"></div>
       <button class="btn-add-cp" onclick="addCheckpoint()">＋ Add Checkpoint</button>
     </div>
-
-  </div>
-
-  <div class="admin-footer">
-    <button class="btn-reset" onclick="resetToDefaults()">Reset</button>
-    <button class="btn-save" onclick="saveAdmin()">🔗 Save &amp; Copy Link</button>
-  </div>
-</div>
-
-<!-- ── Toast ── -->
-<div class="toast" id="toast"></div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-<script>
-// ══════════════════════════════════════
-//  GAME STATE
-// ══════════════════════════════════════
-const TAPIN_COLORS = ['#f97316','#3a86ff','#2d9a4e','#7c3aed','#e84040','#f5a623','#06b6d4','#ec4899'];
-
-let currentCheckpoint = 0;
-let map, playerMarker, targetMarker, accuracyCircle, routeLine;
-let watchId = null;
-let playerPos = null;
-let isTracking = false;
-let foundCooldown = false;
-
-// Tap-in state
-let tapInTapped = new Set();
-
-let CP = GAME_CONFIG.checkpoints;
-let TOTAL = CP.length;
-let RADIUS = GAME_CONFIG.unlockRadius;
-
-// ══════════════════════════════════════
-//  INIT
-// ══════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
-  applyConfigToDOM();
-  initMap();
-  buildProgress();
-  updateUI();
-});
-
-function applyConfigToDOM() {
-  document.getElementById('gameTitle').textContent = GAME_CONFIG.title;
-  document.getElementById('startTitle').textContent = GAME_CONFIG.title;
-  document.getElementById('prizeBox').textContent = GAME_CONFIG.prizeText;
-  document.getElementById('winMessage').textContent = GAME_CONFIG.winMessage;
-  document.getElementById('startCheckpointCount').textContent =
-    `${GAME_CONFIG.checkpoints.length} checkpoint${GAME_CONFIG.checkpoints.length !== 1 ? 's' : ''}`;
-}
-
-function initMap() {
-  map = L.map('map', {
-    center: [CP[0].lat, CP[0].lng],
-    zoom: 16,
-    zoomControl: true,
-    attributionControl: true
-  });
-
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    maxZoom: 19
-  }).addTo(map);
-
-  placeTargetMarker();
-}
-
-function placeTargetMarker() {
-  if (targetMarker) map.removeLayer(targetMarker);
-
-  const cp = CP[currentCheckpoint];
-  const icon = L.divIcon({
-    className: '',
-    html: `<div class="target-marker-inner"></div>`,
-    iconSize: [22, 22],
-    iconAnchor: [11, 11]
-  });
-
-  targetMarker = L.marker([cp.lat, cp.lng], { icon })
-    .addTo(map)
-    .bindPopup(`<b>${cp.hint}</b>`, { closeButton: false });
-
-  if (routeLine) map.removeLayer(routeLine);
-  routeLine = L.circle([cp.lat, cp.lng], {
-    radius: RADIUS,
-    color: '#e84040',
-    fillColor: '#e84040',
-    fillOpacity: 0.08,
-    weight: 1.5,
-    dashArray: '5, 5'
-  }).addTo(map);
-}
-
-// ══════════════════════════════════════
-//  PROGRESS BAR
-// ══════════════════════════════════════
-function buildProgress() {
-  const bar = document.getElementById('progressBar');
-  bar.innerHTML = '';
-  for (let i = 0; i < TOTAL; i++) {
-    const step = document.createElement('div');
-    step.className = 'progress-step';
-
-    const dot = document.createElement('div');
-    dot.className = 'dot' + (i === TOTAL - 1 ? ' trophy' : '');
-    dot.id = `dot-${i}`;
-    dot.textContent = i === TOTAL - 1 ? '🏆' : (i + 1);
-    step.appendChild(dot);
-
-    if (i < TOTAL - 1) {
-      const conn = document.createElement('div');
-      conn.className = 'connector';
-      conn.id = `conn-${i}`;
-      step.appendChild(conn);
-    }
-
-    bar.appendChild(step);
-  }
-  updateProgress();
-}
-
-function updateProgress() {
-  for (let i = 0; i < TOTAL; i++) {
-    const dot = document.getElementById(`dot-${i}`);
-    if (!dot) continue;
-    dot.className = 'dot' + (i === TOTAL - 1 ? ' trophy' : '');
-    if (i < currentCheckpoint) dot.classList.add('done');
-    else if (i === currentCheckpoint) dot.classList.add('current');
-
-    if (i < TOTAL - 1) {
-      const conn = document.getElementById(`conn-${i}`);
-      if (conn) conn.className = 'connector' + (i < currentCheckpoint ? ' done' : '');
-    }
-  }
-}
-
-// ══════════════════════════════════════
-//  UI UPDATE
-// ══════════════════════════════════════
-function updateUI() {
-  const cp = CP[currentCheckpoint];
-  document.getElementById('clueText').textContent = cp.clue;
-  document.getElementById('clueIcon').textContent = currentCheckpoint === TOTAL - 1 ? '🏆' : '🔍';
-  document.getElementById('headerBadge').textContent = `${currentCheckpoint + 1} / ${TOTAL}`;
-  document.getElementById('checkpointVal').textContent = `${currentCheckpoint + 1} of ${TOTAL}`;
-  updateProgress();
-  updateDistance();
-}
-
-function updateDistance() {
-  const el = document.getElementById('distanceVal');
-  if (!playerPos) { el.textContent = '—'; el.className = 'chip-value'; return; }
-  const d = haversine(playerPos.lat, playerPos.lng, CP[currentCheckpoint].lat, CP[currentCheckpoint].lng);
-  const display = d < 1000 ? `${Math.round(d)}m` : `${(d / 1000).toFixed(1)}km`;
-  el.textContent = display;
-  el.className = 'chip-value' + (d < 50 ? ' hot' : d < 150 ? ' warm' : '');
-}
-
-// ══════════════════════════════════════
-//  GPS TRACKING
-// ══════════════════════════════════════
-function dismissStart() {
-  document.getElementById('startOverlay').classList.add('hidden');
-}
-
-function startTracking() {
-  if (!navigator.geolocation) {
-    showToast("GPS not available on this device");
-    return;
-  }
-
-  if (isTracking) {
-    if (playerPos) map.setView([playerPos.lat, playerPos.lng], 17);
-    return;
-  }
-
-  isTracking = true;
-  const btn = document.getElementById('gpsBtn');
-  btn.className = 'gps-btn tracking';
-  btn.innerHTML = '<span>🔄</span> Getting GPS…';
-
-  watchId = navigator.geolocation.watchPosition(
-    onPosition,
-    onGpsError,
-    { enableHighAccuracy: true, maximumAge: 3000, timeout: 10000 }
-  );
-}
-
-function onPosition(pos) {
-  playerPos = { lat: pos.coords.latitude, lng: pos.coords.longitude };
-  const acc = pos.coords.accuracy;
-
-  const playerIcon = L.divIcon({
-    className: 'my-location-marker',
-    iconSize: [18, 18],
-    iconAnchor: [9, 9]
-  });
-
-  if (!playerMarker) {
-    playerMarker = L.marker([playerPos.lat, playerPos.lng], { icon: playerIcon }).addTo(map);
-  } else {
-    playerMarker.setLatLng([playerPos.lat, playerPos.lng]);
-  }
-
-  if (accuracyCircle) map.removeLayer(accuracyCircle);
-  if (acc < 100) {
-    accuracyCircle = L.circle([playerPos.lat, playerPos.lng], {
-      radius: acc,
-      color: '#3a86ff',
-      fillColor: '#3a86ff',
-      fillOpacity: 0.06,
-      weight: 1
-    }).addTo(map);
-  }
-
-  const btn = document.getElementById('gpsBtn');
-  btn.className = 'gps-btn tracking';
-  btn.innerHTML = '<span>📡</span> GPS Active — Tap to Re-centre';
-
-  updateDistance();
-  checkProximity();
-}
-
-function onGpsError(err) {
-  showToast("GPS error: " + err.message);
-  const btn = document.getElementById('gpsBtn');
-  btn.className = 'gps-btn';
-  btn.innerHTML = '<span>📍</span> Retry GPS';
-  isTracking = false;
-}
-
-function checkProximity() {
-  if (!playerPos || foundCooldown) return;
-  const cp = CP[currentCheckpoint];
-  const dist = haversine(playerPos.lat, playerPos.lng, cp.lat, cp.lng);
-  if (dist <= RADIUS) {
-    foundCooldown = true;
-    initiateTapIn();
-  }
-}
-
-// ══════════════════════════════════════
-//  TAP-IN
-// ══════════════════════════════════════
-function initiateTapIn() {
-  const team = GAME_CONFIG.team || [];
-  if (team.length <= 1) { onCheckpointReached(); return; }
-
-  tapInTapped = new Set();
-  document.getElementById('tapInTitle').textContent =
-    `Checkpoint ${currentCheckpoint + 1} — Tap In!`;
-
-  const grid = document.getElementById('tapInGrid');
-  grid.innerHTML = '';
-  team.forEach((name, i) => {
-    const color = TAPIN_COLORS[i % TAPIN_COLORS.length];
-    const btn = document.createElement('button');
-    btn.className = 'tapin-btn';
-    btn.id = `tapin-btn-${i}`;
-    btn.style.borderColor = color;
-    btn.style.color = color;
-    btn.innerHTML = `<span class="tapin-check">✓</span><span class="tapin-name">${escapeHtml(name)}</span>`;
-    btn.onclick = () => tapInPress(i, color);
-    grid.appendChild(btn);
-  });
-
-  updateTapInProgress();
-  document.getElementById('tapInOverlay').classList.remove('hidden');
-}
-
-function tapInPress(i, color) {
-  if (tapInTapped.has(i)) return;
-  tapInTapped.add(i);
-  const btn = document.getElementById(`tapin-btn-${i}`);
-  btn.classList.add('tapped');
-  btn.style.backgroundColor = color;
-  updateTapInProgress();
-
-  if (tapInTapped.size === (GAME_CONFIG.team || []).length) {
-    document.getElementById('tapInProgress').classList.add('complete');
-    setTimeout(() => {
-      document.getElementById('tapInOverlay').classList.add('hidden');
-      onCheckpointReached();
-    }, 700);
-  }
-}
-
-function updateTapInProgress() {
-  const total = (GAME_CONFIG.team || []).length;
-  const done = tapInTapped.size;
-  const el = document.getElementById('tapInProgress');
-  el.textContent = done === total ? '🎉 Everyone\'s here!' : `${done} of ${total} tapped in`;
-}
-
-function cancelTapIn() {
-  document.getElementById('tapInOverlay').classList.add('hidden');
-  foundCooldown = false;
-  tapInTapped = new Set();
-}
-
-// ══════════════════════════════════════
-//  CHECKPOINT LOGIC
-// ══════════════════════════════════════
-function onCheckpointReached() {
-  if (currentCheckpoint === TOTAL - 1) {
-    showWin();
-  } else {
-    showFoundOverlay();
-  }
-}
-
-function showFoundOverlay() {
-  const overlay = document.getElementById('foundOverlay');
-  const nextIdx = currentCheckpoint + 1;
-  document.getElementById('nextClueText').textContent = CP[nextIdx].clue;
-  document.getElementById('foundTitle').textContent = `Checkpoint ${currentCheckpoint + 1} Found! 🎯`;
-  document.getElementById('foundSub').textContent = `${TOTAL - nextIdx} checkpoint${TOTAL - nextIdx !== 1 ? 's' : ''} to go — here's your next clue:`;
-  overlay.classList.remove('hidden');
-
-  const btn = document.getElementById('gpsBtn');
-  btn.className = 'gps-btn found';
-  btn.innerHTML = '<span>🎯</span> Checkpoint Found!';
-}
-
-function nextCheckpoint() {
-  currentCheckpoint++;
-  foundCooldown = false;
-  document.getElementById('foundOverlay').classList.add('hidden');
-
-  placeTargetMarker();
-  map.setView([CP[currentCheckpoint].lat, CP[currentCheckpoint].lng], 16);
-  updateUI();
-
-  const btn = document.getElementById('gpsBtn');
-  btn.className = 'gps-btn tracking';
-  btn.innerHTML = '<span>📡</span> GPS Active — Tap to Re-centre';
-}
-
-function showWin() {
-  if (watchId) navigator.geolocation.clearWatch(watchId);
-  document.getElementById('winOverlay').classList.remove('hidden');
-}
-
-function restartGame() {
-  currentCheckpoint = 0;
-  playerPos = null;
-  isTracking = false;
-  foundCooldown = false;
-  watchId = null;
-
-  if (playerMarker) { map.removeLayer(playerMarker); playerMarker = null; }
-  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
-
-  document.getElementById('winOverlay').classList.add('hidden');
-  document.getElementById('gpsBtn').className = 'gps-btn';
-  document.getElementById('gpsBtn').innerHTML = '<span>📍</span> Start GPS Tracking';
-  document.getElementById('distanceVal').textContent = '—';
-
-  placeTargetMarker();
-  map.setView([CP[0].lat, CP[0].lng], 16);
-  updateUI();
-}
-
-// ══════════════════════════════════════
-//  ADMIN — PIN
-// ══════════════════════════════════════
-const ADMIN_PIN_KEY = 'th_admin_pin';
-const CONFIG_KEY = 'th_game_config';
-let adminPinInput = '';
-
-function getStoredPin() {
-  return localStorage.getItem(ADMIN_PIN_KEY) || '1234';
-}
-
-function openAdminPin() {
-  adminPinInput = '';
-  updatePinDisplay();
-  document.getElementById('pinError').textContent = '';
-  document.getElementById('adminPinOverlay').classList.remove('hidden');
-}
-
-function closeAdminPin() {
-  document.getElementById('adminPinOverlay').classList.add('hidden');
-}
-
-function pinPress(digit) {
-  if (adminPinInput.length >= 4) return;
-  adminPinInput += digit;
-  updatePinDisplay();
-  if (adminPinInput.length === 4) setTimeout(checkPin, 120);
-}
-
-function pinDelete() {
-  adminPinInput = adminPinInput.slice(0, -1);
-  updatePinDisplay();
-}
-
-function updatePinDisplay() {
-  const filled = adminPinInput.length;
-  const dots = Array.from({length: 4}, (_, i) => i < filled ? '●' : '○');
-  document.getElementById('pinDisplay').textContent = dots.join(' ');
-}
-
-function checkPin() {
-  if (adminPinInput === getStoredPin()) {
-    closeAdminPin();
-    openAdmin();
-  } else {
-    document.getElementById('pinError').textContent = 'Incorrect PIN — try again';
-    adminPinInput = '';
-    updatePinDisplay();
-  }
-}
-
-// ══════════════════════════════════════
-//  ADMIN — CONFIG FORM
-// ══════════════════════════════════════
-let editingConfig = null;
-
-function openAdmin() {
-  editingConfig = JSON.parse(JSON.stringify(GAME_CONFIG));
-  renderAdminForm();
-  document.getElementById('adminOverlay').classList.remove('hidden');
-}
-
-function closeAdmin() {
-  document.getElementById('adminOverlay').classList.add('hidden');
-}
-
-function renderAdminForm() {
-  document.getElementById('adminTitle').value = editingConfig.title;
-  document.getElementById('adminRadius').value = editingConfig.unlockRadius;
-  document.getElementById('adminWinMsg').value = editingConfig.winMessage;
-  document.getElementById('adminPrize').value = editingConfig.prizeText;
-  document.getElementById('adminNewPin').value = '';
+  `;
   if (!editingConfig.team) editingConfig.team = [];
   renderTeam();
-  renderCheckpoints();
+  renderTreasureCheckpoints();
+}
+
+function renderTreasureCheckpoints() {
+  const c = document.getElementById('cpContainer');
+  c.innerHTML = '';
+  editingConfig.checkpoints.forEach((cp, i) => {
+    const isLast = i === editingConfig.checkpoints.length - 1;
+    const div = document.createElement('div');
+    div.className = 'cp-card';
+    div.innerHTML = `
+      <div class="cp-card-header">
+        <span class="cp-label">${isLast ? '🏆 Final' : `📍 Checkpoint ${i + 1}`}</span>
+        ${editingConfig.checkpoints.length > 1
+          ? `<button class="btn-remove" onclick="removeCp(${i})">✕ Remove</button>` : ''}
+      </div>
+      <div class="btn-loc-row">
+        <button class="btn-use-gps" onclick="useGps(${i})">📍 GPS</button>
+        <button class="btn-pick-map" onclick="openMapPicker(${i})">🗺️ Pick on Map</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Latitude</label>
+          <input class="form-input" type="number" step="any" id="cp-lat-${i}"
+            value="${cp.lat}" oninput="setCpField(${i},'lat',this.value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude</label>
+          <input class="form-input" type="number" step="any" id="cp-lng-${i}"
+            value="${cp.lng}" oninput="setCpField(${i},'lng',this.value)">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Clue Text</label>
+        <textarea class="form-input" rows="2" oninput="setCpField(${i},'clue',this.value)">${esc(cp.clue)}</textarea>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Map Marker Hint</label>
+        <input class="form-input" type="text" value="${esc(cp.hint)}"
+          oninput="setCpField(${i},'hint',this.value)">
+      </div>
+    `;
+    c.appendChild(div);
+  });
+  updateBadge();
+}
+
+function renderOrienteeringConfig() {
+  const body = document.getElementById('configBody');
+  body.innerHTML = `
+    <div class="section">
+      <div class="section-title">🧭 Game Settings</div>
+      <div class="form-group">
+        <label class="form-label">Game Title</label>
+        <input class="form-input" type="text" id="cfgTitle" value="${esc(editingConfig.title)}" placeholder="Orienteering 🧭">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Unlock Radius (metres)</label>
+          <input class="form-input" type="number" id="cfgRadius" min="5" max="500" value="${editingConfig.unlockRadius}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Win Message</label>
+          <input class="form-input" type="text" id="cfgWinMsg" value="${esc(editingConfig.winMessage)}">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Answer / Prize Text</label>
+        <input class="form-input" type="text" id="cfgAnswer" value="${esc(editingConfig.answer)}" placeholder="🍎 The answer is: APPLE">
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">👥 Team Members</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:12px;line-height:1.4">Each member gets their own tap button at every control. Leave empty for solo play.</p>
+      <div id="teamContainer"></div>
+      <button class="btn-add-cp" style="border-color:#c4b5fd;color:#5b21b6" onclick="addTeamMember()">＋ Add Team Member</button>
+    </div>
+
+    <div class="section">
+      <div class="section-title">🟠 Controls</div>
+      <div id="cpContainer"></div>
+      <button class="btn-add-cp" onclick="addCheckpoint()">＋ Add Control</button>
+    </div>
+  `;
+  if (!editingConfig.team) editingConfig.team = [];
+  renderTeam();
+  renderOrienteeringCheckpoints();
+}
+
+function renderOrienteeringCheckpoints() {
+  const c = document.getElementById('cpContainer');
+  c.innerHTML = '';
+  editingConfig.checkpoints.forEach((cp, i) => {
+    const div = document.createElement('div');
+    div.className = 'cp-card';
+    div.innerHTML = `
+      <div class="cp-card-header">
+        <span class="cp-label">🟠 Control ${i + 1}</span>
+        ${editingConfig.checkpoints.length > 1
+          ? `<button class="btn-remove" onclick="removeCp(${i})">✕ Remove</button>` : ''}
+      </div>
+      <div class="btn-loc-row">
+        <button class="btn-use-gps" onclick="useGps(${i})">📍 GPS</button>
+        <button class="btn-pick-map" onclick="openMapPicker(${i})">🗺️ Pick on Map</button>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Latitude</label>
+          <input class="form-input" type="number" step="any" id="cp-lat-${i}"
+            value="${cp.lat}" oninput="setCpField(${i},'lat',this.value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Longitude</label>
+          <input class="form-input" type="number" step="any" id="cp-lng-${i}"
+            value="${cp.lng}" oninput="setCpField(${i},'lng',this.value)">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Label (map marker)</label>
+          <input class="form-input" type="text" id="cp-label-${i}"
+            value="${esc(cp.label)}" oninput="setCpField(${i},'label',this.value)">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Reveals</label>
+          <input class="reveals-input" type="text" maxlength="3" id="cp-reveals-${i}"
+            value="${esc(cp.reveals)}" oninput="setCpField(${i},'reveals',this.value.toUpperCase().trim())">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Hint (shown in popup)</label>
+        <input class="form-input" type="text" id="cp-hint-${i}"
+          value="${esc(cp.hint)}" oninput="setCpField(${i},'hint',this.value)">
+      </div>
+    `;
+    c.appendChild(div);
+  });
+  updateBadge();
+}
+
+function updateBadge() {
+  const n = editingConfig.checkpoints.length;
+  const badge = document.getElementById('headerBadge');
+  badge.textContent = `${n} ${currentMode === 'treasure' ? 'checkpoint' : 'control'}${n !== 1 ? 's' : ''}`;
+}
+
+// ── Field updates ──
+function setCpField(i, field, value) {
+  if (field === 'lat' || field === 'lng') {
+    editingConfig.checkpoints[i][field] = parseFloat(value) || 0;
+  } else {
+    editingConfig.checkpoints[i][field] = value;
+  }
+}
+
+function removeCp(i) {
+  editingConfig.checkpoints.splice(i, 1);
+  if (currentMode === 'treasure') renderTreasureCheckpoints();
+  else renderOrienteeringCheckpoints();
+}
+
+function addCheckpoint() {
+  const cps = editingConfig.checkpoints;
+  const last = cps[cps.length - 1];
+  const base = {
+    lat: last ? parseFloat((last.lat + 0.0005).toFixed(6)) : 53.3734,
+    lng: last ? parseFloat((last.lng + 0.0005).toFixed(6)) : -6.2052,
+  };
+
+  if (currentMode === 'treasure') {
+    cps.push({ ...base, clue: "Enter the clue for this checkpoint…", hint: `Checkpoint ${cps.length + 1}` });
+    renderTreasureCheckpoints();
+  } else {
+    cps.push({ ...base, label: `Control ${cps.length + 1}`, hint: "Describe where to find this control", reveals: "?" });
+    renderOrienteeringCheckpoints();
+  }
+
+  setTimeout(() => {
+    document.getElementById('configBody').scrollTop = document.getElementById('configBody').scrollHeight;
+  }, 50);
+}
+
+function useGps(i) {
+  if (!navigator.geolocation) { showToast("GPS not available"); return; }
+  showToast("Getting GPS…");
+  navigator.geolocation.getCurrentPosition(pos => {
+    const lat = parseFloat(pos.coords.latitude.toFixed(6));
+    const lng = parseFloat(pos.coords.longitude.toFixed(6));
+    editingConfig.checkpoints[i].lat = lat;
+    editingConfig.checkpoints[i].lng = lng;
+    const latEl = document.getElementById(`cp-lat-${i}`);
+    const lngEl = document.getElementById(`cp-lng-${i}`);
+    if (latEl) latEl.value = lat;
+    if (lngEl) lngEl.value = lng;
+    showToast("Location set!");
+  }, err => showToast("GPS error: " + err.message), { enableHighAccuracy: true, timeout: 10000 });
 }
 
 function renderTeam() {
   const container = document.getElementById('teamContainer');
+  if (!container) return;
   container.innerHTML = '';
   (editingConfig.team || []).forEach((name, i) => {
     const row = document.createElement('div');
-    row.className = 'team-member-row';
+    row.style.cssText = 'display:flex;align-items:center;gap:8px;margin-bottom:8px';
     row.innerHTML = `
-      <div class="team-color-dot" style="background:${TAPIN_COLORS[i % TAPIN_COLORS.length]}"></div>
-      <input class="form-input" type="text" value="${escapeHtml(name)}"
+      <div style="width:26px;height:26px;border-radius:50%;flex-shrink:0;background:${TAPIN_COLORS[i % TAPIN_COLORS.length]}"></div>
+      <input class="form-input" type="text" value="${esc(name)}"
         placeholder="Team member name" style="margin:0;flex:1"
         oninput="editingConfig.team[${i}] = this.value">
       <button class="btn-remove" onclick="removeTeamMember(${i})">✕</button>
@@ -1537,210 +1207,87 @@ function removeTeamMember(i) {
   renderTeam();
 }
 
-function renderCheckpoints() {
-  const container = document.getElementById('checkpointsContainer');
-  container.innerHTML = '';
-
-  editingConfig.checkpoints.forEach((cp, i) => {
-    const isLast = i === editingConfig.checkpoints.length - 1;
-    const card = document.createElement('div');
-    card.className = 'cp-card';
-    card.innerHTML = `
-      <div class="cp-card-header">
-        <span class="cp-number">${isLast ? '🏆 Final Checkpoint' : `📍 Checkpoint ${i + 1}`}</span>
-        ${editingConfig.checkpoints.length > 1
-          ? `<button class="btn-remove" onclick="removeCheckpoint(${i})">✕ Remove</button>`
-          : ''}
-      </div>
-      <button class="btn-use-gps" onclick="useGpsForCheckpoint(${i})">📍 Use Current GPS Location</button>
-      <div class="form-row">
-        <div class="form-group">
-          <label class="form-label">Latitude</label>
-          <input class="form-input" type="number" step="any" id="cp-lat-${i}"
-            value="${cp.lat}" placeholder="e.g. 53.3734"
-            oninput="updateCpCoord(${i},'lat',this.value)">
-        </div>
-        <div class="form-group">
-          <label class="form-label">Longitude</label>
-          <input class="form-input" type="number" step="any" id="cp-lng-${i}"
-            value="${cp.lng}" placeholder="e.g. -6.2052"
-            oninput="updateCpCoord(${i},'lng',this.value)">
-        </div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Clue Text</label>
-        <textarea class="form-input" rows="2" id="cp-clue-${i}"
-          oninput="updateCpText(${i},'clue',this.value)">${escapeHtml(cp.clue)}</textarea>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Map Marker Hint</label>
-        <input class="form-input" type="text" id="cp-hint-${i}"
-          value="${escapeHtml(cp.hint)}" placeholder="e.g. Checkpoint 1"
-          oninput="updateCpText(${i},'hint',this.value)">
-      </div>
-    `;
-    container.appendChild(card);
-  });
-}
-
-function escapeHtml(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/"/g, '&quot;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;');
-}
-
-function updateCpCoord(index, field, value) {
-  editingConfig.checkpoints[index][field] = parseFloat(value) || 0;
-}
-
-function updateCpText(index, field, value) {
-  editingConfig.checkpoints[index][field] = value;
-}
-
-function removeCheckpoint(index) {
-  editingConfig.checkpoints.splice(index, 1);
-  renderCheckpoints();
-}
-
-function addCheckpoint() {
-  const cps = editingConfig.checkpoints;
-  const last = cps[cps.length - 1];
-  cps.push({
-    lat: last ? parseFloat((last.lat + 0.0005).toFixed(6)) : 53.3734,
-    lng: last ? parseFloat((last.lng + 0.0005).toFixed(6)) : -6.2052,
-    clue: "Enter the clue for this checkpoint…",
-    hint: `Checkpoint ${cps.length + 1}`
-  });
-  renderCheckpoints();
-  setTimeout(() => {
-    document.getElementById('adminBody').scrollTop = document.getElementById('adminBody').scrollHeight;
-  }, 50);
-}
-
-function useGpsForCheckpoint(index) {
-  if (!navigator.geolocation) { showToast("GPS not available"); return; }
-  showToast("Getting GPS…");
-  navigator.geolocation.getCurrentPosition(pos => {
-    const lat = parseFloat(pos.coords.latitude.toFixed(6));
-    const lng = parseFloat(pos.coords.longitude.toFixed(6));
-    editingConfig.checkpoints[index].lat = lat;
-    editingConfig.checkpoints[index].lng = lng;
-    const latEl = document.getElementById(`cp-lat-${index}`);
-    const lngEl = document.getElementById(`cp-lng-${index}`);
-    if (latEl) latEl.value = lat;
-    if (lngEl) lngEl.value = lng;
-    showToast("Location set!");
-  }, err => {
-    showToast("GPS error: " + err.message);
-  }, { enableHighAccuracy: true, timeout: 10000 });
-}
-
-function resetToDefaults() {
-  if (!confirm('Reset to default configuration? This cannot be undone.')) return;
-  editingConfig = JSON.parse(JSON.stringify(DEFAULT_GAME_CONFIG));
-  renderAdminForm();
-}
-
-function saveAdmin() {
-  // Read top-level fields
-  const title = document.getElementById('adminTitle').value.trim();
-  const radius = parseInt(document.getElementById('adminRadius').value);
-  const winMsg = document.getElementById('adminWinMsg').value.trim();
-  const prize = document.getElementById('adminPrize').value.trim();
-  const newPin = document.getElementById('adminNewPin').value.trim();
-
-  if (!title) { showToast("Title cannot be empty"); return; }
-  if (!radius || radius < 1) { showToast("Unlock radius must be at least 1m"); return; }
-  if (editingConfig.checkpoints.length < 1) { showToast("Need at least 1 checkpoint"); return; }
-  if (newPin && !/^\d{4}$/.test(newPin)) { showToast("PIN must be exactly 4 digits"); return; }
-
-  editingConfig.title = title;
-  editingConfig.unlockRadius = radius;
-  editingConfig.winMessage = winMsg;
-  editingConfig.prizeText = prize;
+// ── Harvest top-level fields before generating ──
+function harvestTopFields() {
+  editingConfig.title = (document.getElementById('cfgTitle')?.value.trim()) || editingConfig.title;
+  editingConfig.unlockRadius = parseInt(document.getElementById('cfgRadius')?.value) || editingConfig.unlockRadius;
+  editingConfig.winMessage = document.getElementById('cfgWinMsg')?.value.trim() || editingConfig.winMessage;
+  if (currentMode === 'treasure') {
+    editingConfig.prizeText = document.getElementById('cfgPrize')?.value.trim() || editingConfig.prizeText;
+  } else {
+    editingConfig.answer = document.getElementById('cfgAnswer')?.value.trim() || editingConfig.answer;
+  }
   editingConfig.team = Array.from(document.querySelectorAll('#teamContainer .form-input'))
     .map(el => el.value.trim()).filter(Boolean);
+}
 
-  // Read checkpoint fields one more time to catch any un-fired oninput events
-  editingConfig.checkpoints.forEach((cp, i) => {
-    const latEl = document.getElementById(`cp-lat-${i}`);
-    const lngEl = document.getElementById(`cp-lng-${i}`);
-    const clueEl = document.getElementById(`cp-clue-${i}`);
-    const hintEl = document.getElementById(`cp-hint-${i}`);
-    if (latEl) cp.lat = parseFloat(latEl.value) || 0;
-    if (lngEl) cp.lng = parseFloat(lngEl.value) || 0;
-    if (clueEl) cp.clue = clueEl.value;
-    if (hintEl) cp.hint = hintEl.value;
-  });
+// ══════════════════════════════════════
+//  GENERATE LINK
+// ══════════════════════════════════════
+function generateLink() {
+  harvestTopFields();
 
-  if (newPin) localStorage.setItem(ADMIN_PIN_KEY, newPin);
+  if (!editingConfig.title) { showToast("Title cannot be empty"); return; }
+  if (editingConfig.unlockRadius < 1) { showToast("Unlock radius must be at least 1m"); return; }
+  if (editingConfig.checkpoints.length < 1) {
+    showToast(`Need at least 1 ${currentMode === 'treasure' ? 'checkpoint' : 'control'}`);
+    return;
+  }
 
-  // Encode config into URL hash
+  // Save to localStorage so admin can come back and edit
+  localStorage.setItem(STORAGE_KEYS[currentMode], JSON.stringify(editingConfig));
+
+  const gameFile = currentMode === 'treasure' ? 'treasure-hunt.html' : 'orienteering.html';
+  const base = window.location.href.replace(/admin\.html.*$/, '');
   const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(editingConfig))));
-  history.replaceState(null, '', '#' + encoded);
+  generatedUrl = base + gameFile + '#' + encoded;
 
-  // Apply to live config
-  Object.assign(GAME_CONFIG, editingConfig);
-  CP = GAME_CONFIG.checkpoints;
-  TOTAL = CP.length;
-  RADIUS = GAME_CONFIG.unlockRadius;
+  // Show the link box
+  const box = document.getElementById('linkBox');
+  box.className = `link-box ${currentMode} show`;
+  document.getElementById('linkUrl').textContent = generatedUrl;
+  document.getElementById('linkOpenBtn').href = generatedUrl;
 
-  closeAdmin();
-  reinitGame();
+  // Show share button only if Web Share API available
+  document.getElementById('linkShareBtn').style.display =
+    navigator.share ? '' : 'none';
 
-  // Copy share URL to clipboard
-  const shareUrl = window.location.href;
-  navigator.clipboard.writeText(shareUrl).then(() => {
-    showToast("Link copied — share it with your players!");
+  // Update link button classes
+  document.getElementById('linkCopyBtn').className = `link-btn ${currentMode}`;
+  document.getElementById('linkShareBtn').className = `link-btn ${currentMode}`;
+  document.getElementById('linkOpenBtn').className = `link-btn ${currentMode}`;
+
+  // Scroll footer into view
+  document.getElementById('linkBox').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  showToast("Link ready!");
+}
+
+function copyLink() {
+  if (!generatedUrl) return;
+  navigator.clipboard.writeText(generatedUrl).then(() => {
+    showToast("Link copied to clipboard!");
   }).catch(() => {
-    showToast("Config saved! Copy the URL from your browser to share.");
+    showToast("Copy the URL from the box above");
   });
 }
 
-function reinitGame() {
-  // Stop GPS
-  if (watchId) { navigator.geolocation.clearWatch(watchId); watchId = null; }
-
-  // Reset state
-  currentCheckpoint = 0;
-  playerPos = null;
-  isTracking = false;
-  foundCooldown = false;
-  tapInTapped = new Set();
-  document.getElementById('tapInOverlay').classList.add('hidden');
-
-  // Clear map layers
-  if (playerMarker) { map.removeLayer(playerMarker); playerMarker = null; }
-  if (accuracyCircle) { map.removeLayer(accuracyCircle); accuracyCircle = null; }
-  if (targetMarker) { map.removeLayer(targetMarker); targetMarker = null; }
-  if (routeLine) { map.removeLayer(routeLine); routeLine = null; }
-
-  // Reset UI
-  document.getElementById('gpsBtn').className = 'gps-btn';
-  document.getElementById('gpsBtn').innerHTML = '<span>📍</span> Start GPS Tracking';
-  document.getElementById('distanceVal').textContent = '—';
-  document.getElementById('winOverlay').classList.add('hidden');
-  document.getElementById('foundOverlay').classList.add('hidden');
-
-  applyConfigToDOM();
-  buildProgress();
-  placeTargetMarker();
-  map.setView([CP[0].lat, CP[0].lng], 16);
-  updateUI();
+function shareLink() {
+  if (!generatedUrl || !navigator.share) return;
+  navigator.share({
+    title: editingConfig.title,
+    text: `Join the ${editingConfig.title}!`,
+    url: generatedUrl
+  }).catch(() => {});
 }
 
 // ══════════════════════════════════════
 //  UTILS
 // ══════════════════════════════════════
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat/2) ** 2 +
-            Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) * Math.sin(dLon/2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+function esc(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;').replace(/"/g, '&quot;')
+    .replace(/</g, '&lt;').replace(/>/g, '&gt;');
 }
 
 function showToast(msg) {
@@ -1748,6 +1295,70 @@ function showToast(msg) {
   t.textContent = msg;
   t.classList.add('show');
   setTimeout(() => t.classList.remove('show'), 3000);
+}
+</script>
+<!-- Map Picker Modal -->
+<div id="mapPickerModal">
+  <div class="map-picker-bar">
+    <button class="btn-map-cancel" onclick="cancelMapPicker()">✕ Cancel</button>
+    <span class="map-picker-coords" id="mapPickerCoords">Tap map to place pin</span>
+    <button class="btn-map-confirm" onclick="confirmMapPick()">✓ Use Location</button>
+  </div>
+  <div id="mapPickerContainer"></div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+let _mpMap = null, _mpMarker = null, _mpIdx = null, _mpLat = null, _mpLng = null;
+
+function openMapPicker(i) {
+  _mpIdx = i;
+  const cp = editingConfig.checkpoints[i];
+  _mpLat = (cp.lat && cp.lat !== 0) ? cp.lat : 53.3734;
+  _mpLng = (cp.lng && cp.lng !== 0) ? cp.lng : -6.2052;
+  document.getElementById('mapPickerModal').classList.add('open');
+  if (!_mpMap) {
+    _mpMap = L.map('mapPickerContainer').setView([_mpLat, _mpLng], 15);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap contributors'
+    }).addTo(_mpMap);
+    _mpMarker = L.marker([_mpLat, _mpLng], { draggable: true }).addTo(_mpMap);
+    _mpMarker.on('dragend', e => {
+      const p = e.target.getLatLng();
+      _mpLat = parseFloat(p.lat.toFixed(6));
+      _mpLng = parseFloat(p.lng.toFixed(6));
+      _mpUpdateCoords();
+    });
+    _mpMap.on('click', e => {
+      _mpLat = parseFloat(e.latlng.lat.toFixed(6));
+      _mpLng = parseFloat(e.latlng.lng.toFixed(6));
+      _mpMarker.setLatLng([_mpLat, _mpLng]);
+      _mpUpdateCoords();
+    });
+  } else {
+    _mpMap.setView([_mpLat, _mpLng], 15);
+    _mpMarker.setLatLng([_mpLat, _mpLng]);
+  }
+  _mpUpdateCoords();
+  setTimeout(() => _mpMap.invalidateSize(), 100);
+}
+
+function _mpUpdateCoords() {
+  document.getElementById('mapPickerCoords').textContent = _mpLat + ', ' + _mpLng;
+}
+
+function confirmMapPick() {
+  editingConfig.checkpoints[_mpIdx].lat = _mpLat;
+  editingConfig.checkpoints[_mpIdx].lng = _mpLng;
+  const latEl = document.getElementById('cp-lat-' + _mpIdx);
+  const lngEl = document.getElementById('cp-lng-' + _mpIdx);
+  if (latEl) latEl.value = _mpLat;
+  if (lngEl) lngEl.value = _mpLng;
+  document.getElementById('mapPickerModal').classList.remove('open');
+}
+
+function cancelMapPicker() {
+  document.getElementById('mapPickerModal').classList.remove('open');
 }
 </script>
 </body>
