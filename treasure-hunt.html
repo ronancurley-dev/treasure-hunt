@@ -892,7 +892,7 @@ const GAME_CONFIG = (function() {
   try {
     const hash = window.location.hash.slice(1);
     if (hash) {
-      const decoded = JSON.parse(decodeURIComponent(escape(atob(hash))));
+      const decoded = JSON.parse(decodeURIComponent(escape(atob(hash.replace(/-/g,'+').replace(/_/g,'/')))));
       return Object.assign({}, DEFAULT_GAME_CONFIG, decoded);
     }
   } catch(e) {}
@@ -1692,7 +1692,7 @@ function saveAdmin() {
   if (newPin) localStorage.setItem(ADMIN_PIN_KEY, newPin);
 
   // Encode config into URL hash
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(editingConfig))));
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(editingConfig)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   history.replaceState(null, '', '#' + encoded);
 
   // Apply to live config

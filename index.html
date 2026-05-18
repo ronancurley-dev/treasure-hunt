@@ -1239,7 +1239,7 @@ function generateLink() {
 
   const gameFile = currentMode === 'treasure' ? 'treasure-hunt.html' : 'orienteering.html';
   const base = window.location.href.replace(/admin\.html.*$/, '');
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(editingConfig))));
+  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(editingConfig)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
   generatedUrl = base + gameFile + '#' + encoded;
 
   // Show the link box
