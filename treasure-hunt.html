@@ -892,7 +892,8 @@ const GAME_CONFIG = (function() {
   try {
     const hash = new URLSearchParams(window.location.search).get('c') || window.location.hash.slice(1);
     if (hash) {
-      const decoded = JSON.parse(decodeURIComponent(escape(atob(hash.replace(/-/g,'+').replace(/_/g,'/')))));
+      const json = LZString.decompressFromEncodedURIComponent(hash) || decodeURIComponent(escape(atob(hash.replace(/-/g,'+').replace(/_/g,'/'))));
+      const decoded = JSON.parse(json);
       return Object.assign({}, DEFAULT_GAME_CONFIG, decoded);
     }
   } catch(e) {}
@@ -1090,6 +1091,7 @@ const GAME_CONFIG = (function() {
 <div class="toast" id="toast"></div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.4.4/lz-string.min.js"></script>
 <script>
 // ══════════════════════════════════════
 //  GAME STATE
@@ -1692,7 +1694,7 @@ function saveAdmin() {
   if (newPin) localStorage.setItem(ADMIN_PIN_KEY, newPin);
 
   // Encode config into URL hash
-  const encoded = btoa(unescape(encodeURIComponent(JSON.stringify(editingConfig)))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+  const encoded = LZString.compressToEncodedURIComponent(JSON.stringify(editingConfig));
   history.replaceState(null, '', '?c=' + encoded);
 
   // Apply to live config
